@@ -65,7 +65,63 @@ def write_xlsx(report: ParsedReport, output_path: Path) -> None:
             continue
         ws.cell(row=rows["water"], column=3, value=wm.water_volume_m3)
 
+    # Add "Dati Report" sheet with raw FC_report data
+    _write_dati_report_sheet(wb, report)
+
     wb.save(output_path)
+
+
+def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> None:
+    """Add a 'Dati Report' sheet with the parsed FC_report data."""
+    ws = wb.create_sheet("Dati Report")
+
+    # Row 1: metadata
+    ws["A1"] = "File"
+    ws["B1"] = report.header.filename
+    ws["C1"] = "Data"
+    ws["D1"] = report.header.report_date
+    ws["E1"] = "Seriale"
+    ws["F1"] = report.header.serial
+
+    # Row 3: column headers
+    headers = [
+        "Tipo",
+        "Appartamento",
+        "Energia termica",
+        "Unita",
+        "Volume acqua",
+        "Unita",
+        "Volume AFS",
+        "Unita",
+    ]
+    for col, h in enumerate(headers, 1):
+        ws.cell(row=3, column=col, value=h)
+
+    # Data rows: water meters, then heat allocators, then central meters
+    row = 4
+
+    for wm in report.water_meters:
+        ws.cell(row=row, column=1, value="Acqua calda")
+        ws.cell(row=row, column=2, value=wm.description)
+        ws.cell(row=row, column=5, value=wm.water_volume_m3)
+        ws.cell(row=row, column=6, value="m3")
+        row += 1
+
+    for ha in report.heat_allocators:
+        ws.cell(row=row, column=1, value="Contacalorie")
+        ws.cell(row=row, column=2, value=ha.description)
+        ws.cell(row=row, column=3, value=ha.heat_energy_mwh)
+        ws.cell(row=row, column=4, value="MWh")
+        ws.cell(row=row, column=7, value=ha.aux1_volume_m3)
+        ws.cell(row=row, column=8, value="m3")
+        row += 1
+
+    for cm in report.central_meters:
+        ws.cell(row=row, column=1, value="Centrale")
+        ws.cell(row=row, column=2, value=cm.description)
+        ws.cell(row=row, column=3, value=cm.heat_energy_kwh)
+        ws.cell(row=row, column=4, value="kWh")
+        row += 1
 
 
 def _parse_reading_date(report: ParsedReport) -> datetime | None:

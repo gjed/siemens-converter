@@ -99,11 +99,86 @@ def test_afs_values(tmp_path):
     assert ws["C184"].value == 59.69
 
 
-def test_three_sheets_preserved(tmp_path):
+def test_four_sheets(tmp_path):
     out = tmp_path / "output.xlsx"
     write_xlsx(_make_report(), out)
     wb = openpyxl.load_workbook(out)
-    assert len(wb.sheetnames) == 3
+    assert len(wb.sheetnames) == 4
+
+
+def test_dati_report_sheet_exists(tmp_path):
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out)
+    wb = openpyxl.load_workbook(out)
+    assert "Dati Report" in wb.sheetnames
+
+
+def test_dati_report_header_row(tmp_path):
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out)
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Dati Report"]
+    # Row 1: metadata
+    assert ws["A1"].value == "File"
+    assert ws["B1"].value == "FC_report.xls"
+    assert ws["C1"].value == "Data"
+    assert ws["D1"].value == "2026-03-14"
+
+
+def test_dati_report_column_headers(tmp_path):
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out)
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Dati Report"]
+    # Row 3: column headers
+    assert ws["A3"].value == "Tipo"
+    assert ws["B3"].value == "Appartamento"
+    assert ws["C3"].value == "Energia termica"
+    assert ws["D3"].value == "Unita"
+    assert ws["E3"].value == "Volume acqua"
+    assert ws["F3"].value == "Unita"
+    assert ws["G3"].value == "Volume AFS"
+    assert ws["H3"].value == "Unita"
+
+
+def test_dati_report_water_meters(tmp_path):
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out)
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Dati Report"]
+    # Water meters start at row 4
+    assert ws["A4"].value == "Acqua calda"
+    assert ws["B4"].value == "App, 01 Rossi"
+    assert ws["E4"].value == 31.613
+    assert ws["F4"].value == "m3"
+
+
+def test_dati_report_heat_allocators(tmp_path):
+    out = tmp_path / "output.xlsx"
+    report = _make_report()
+    out = tmp_path / "output.xlsx"
+    write_xlsx(report, out)
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Dati Report"]
+    # Heat allocators after water meters: row 4 + 2 water = row 6
+    assert ws["A6"].value == "Contacalorie"
+    assert ws["B6"].value == "App, 01 Rossi"
+    assert ws["C6"].value == 5.243
+    assert ws["D6"].value == "MWh"
+    assert ws["G6"].value == 45.72
+    assert ws["H6"].value == "m3"
+
+
+def test_dati_report_central_meters(tmp_path):
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out)
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Dati Report"]
+    # Central meters after water (2) + heat (2) = row 8
+    assert ws["A8"].value == "Centrale"
+    assert ws["B8"].value == "Riscaldamento"
+    assert ws["C8"].value == 29213
+    assert ws["D8"].value == "kWh"
 
 
 def test_full_pipeline(tmp_path):
