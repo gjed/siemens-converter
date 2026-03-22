@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.coverage
+coverage.xml
+.pytest_cache/
+.venv/
+.ruff_cache/
+
+# Real report data (confidential)
+assets/
+FC_report_EV*.xls
+*Riparto*.xlsx
+*dati necessari*.xlsx
+.~lock.*
