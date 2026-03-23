@@ -147,10 +147,25 @@ _MIN_COL_WIDTHS: dict[int, float] = {
     27: 8,
 }
 
-# Annotation labels for row 3 (0-indexed col -> label, fill)
-_ANNOTATIONS = {
+# Row 1 group headers above data columns (0-indexed col -> label)
+_FILL_BRIGHT_GREEN = PatternFill(
+    start_color="FF66FF33",
+    end_color="FF66FF33",
+    fill_type="solid",
+)
+_ROW1_GROUP_HEADERS: dict[int, tuple[str, PatternFill]] = {
+    15: ("Riparto", _FILL_BRIGHT_GREEN),
+    24: ("Riparto", _FILL_BRIGHT_GREEN),
+    26: ("Conti separati a parte", _FILL_BRIGHT_GREEN),
+}
+
+# Row 3 sub-labels for data column groups (0-indexed col -> label, fill)
+_ROW3_ANNOTATIONS: dict[int, tuple[str, PatternFill]] = {
     15: ("energia termica", _FILL_GREEN),
+    16: ("unita\u0300 energia calore", _FILL_GREEN),
+    17: ("NO energia fresca Split_pers", _FILL_GREEN),
     24: ("volume acqua sanitaria", _FILL_GREEN),
+    25: ("unita\u0300 volume acqua", _FILL_GREEN),
     26: ("volume acqua fredda", _FILL_YELLOW),
 }
 
@@ -174,6 +189,8 @@ def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> Non
     raw_rows = report.raw_device_rows or []
     num_cols = max(len(headers), 38)
 
+    # -- Row 1: metadata labels + group headers over data columns --
+    # Metadata labels in FC_report column positions
     meta_values = [
         report.header.filename,
         report.header.report_date,
@@ -183,31 +200,32 @@ def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> Non
         str(report.header.total_wired),
         report.header.serial,
     ]
-
-    # -- Row 1: metadata labels in the FC_report column positions --
     for i, (col_idx, label) in enumerate(_META_FIELDS):
         c = ws.cell(row=1, column=col_idx + 1, value=label)
         c.font = _FONT_BOLD
         c.fill = _FILL_HEADER
         c.alignment = _ALIGN_CENTER
         c.border = _THIN_BORDER
+    # Group headers over the data columns (same row 1)
+    for col_idx, (label, fill) in _ROW1_GROUP_HEADERS.items():
+        c = ws.cell(row=1, column=col_idx + 1, value=label)
+        c.font = _FONT_BOLD
+        c.fill = fill
+        c.alignment = _ALIGN_CENTER
+        c.border = _THIN_BORDER
     ws.row_dimensions[1].height = 35
 
-    # -- Row 2: metadata values with merged cells for long values --
+    # -- Row 2: metadata values --
     for i, (col_idx, _) in enumerate(_META_FIELDS):
         c = ws.cell(row=2, column=col_idx + 1, value=meta_values[i])
         c.font = _FONT
         c.fill = _FILL_HEADER
         c.alignment = _ALIGN_CENTER
         c.border = _THIN_BORDER
-    # Merge A2:B2 for the long filename
-    ws.merge_cells("A2:B2")
-    # Merge E2:F2 for firmware string
-    ws.merge_cells("E2:F2")
     ws.row_dimensions[2].height = 40
 
-    # -- Row 3: annotation row --
-    for col_idx, (label, fill) in _ANNOTATIONS.items():
+    # -- Row 3: sub-labels for data column groups --
+    for col_idx, (label, fill) in _ROW3_ANNOTATIONS.items():
         c = ws.cell(row=3, column=col_idx + 1, value=label)
         c.font = _FONT_HEADER_ANNOTATION
         c.fill = fill

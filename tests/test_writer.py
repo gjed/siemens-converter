@@ -118,14 +118,22 @@ def test_dati_report_metadata(tmp_path):
     write_xlsx(_make_report(), out)
     wb = openpyxl.load_workbook(out)
     ws = wb["Dati Report"]
-    # Row 1: labels in FC_report column positions
+    # Row 1: metadata labels in FC_report column positions
     assert ws["A1"].value == "Nome File"
     assert ws["B1"].value == "Data Report"
     assert ws["E1"].value == "Versione firmware"
     assert ws["H1"].value == "Numero di serie"
-    # Row 2: values (A2:B2 merged for filename)
+    # Row 1: group headers over data columns
+    assert ws.cell(row=1, column=16).value == "Riparto"  # col P
+    assert ws.cell(row=1, column=25).value == "Riparto"  # col Y
+    assert ws.cell(row=1, column=27).value == "Conti separati a parte"  # col AA
+    # Row 2: metadata values
     assert ws["A2"].value == "FC_report.xls"
     assert ws["H2"].value == "EV123"
+    # Row 3: annotation sub-labels
+    assert ws.cell(row=3, column=16).value == "energia termica"
+    assert ws.cell(row=3, column=25).value == "volume acqua sanitaria"
+    assert ws.cell(row=3, column=27).value == "volume acqua fredda"
 
 
 def test_millesimali_names_from_report(tmp_path):
