@@ -138,16 +138,16 @@ def test_dati_report_metadata(tmp_path):
     assert ws.cell(row=3, column=27).value == "volume acqua fredda"
 
 
-def test_millesimali_names_from_report(tmp_path):
+def test_millesimali_names_reference_inquilini(tmp_path):
     out = tmp_path / "output.xlsx"
     write_xlsx(_make_report(), out)
     wb = openpyxl.load_workbook(out)
     ws = wb["Tabelle millesimali"]
-    assert ws["A4"].value == "App, 01 Rossi"
-    assert ws["A5"].value == "App, 02 Bianchi"
-    assert ws["B4"].value is None
-    assert ws["C4"].value is None
-    assert ws["E4"].value is None
+    # Names come from Inquilini sheet via formulas
+    assert ws["A4"].value == "=Inquilini!A2"  # apt 1
+    assert ws["A5"].value == "=Inquilini!A3"  # apt 2
+    assert ws["B4"].value is None  # subalterno empty
+    assert ws["C4"].value is None  # energy empty
 
 
 def test_inquilini_sheet(tmp_path):
@@ -166,8 +166,20 @@ def test_inquilini_sheet(tmp_path):
     assert ws["B3"].value is None
 
 
-def test_ripartizione_apartment_names(tmp_path):
-    """Apartment names from FC_report should replace 'App. XX' in Ripartizione."""
+def test_ripartizione_references_inquilini(tmp_path):
+    """Apartment cells in Ripartizione should reference Inquilini sheet."""
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out)
+    wb = openpyxl.load_workbook(out)
+    ws = wb.worksheets[0]
+    # Summary row 3 (apt 1) should reference Inquilini!A2
+    assert ws["A3"].value == "=Inquilini!A2"
+    # Detail row 102 (apt 1) should also reference Inquilini
+    assert ws["A102"].value == "=Inquilini!A2"
+
+
+def test_inquilini_has_fc_report_names(tmp_path):
+    """Inquilini column A should have the FC_report apartment descriptions."""
     from siemens_converter.parser import parse_fc_report
 
     fixture = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
@@ -176,11 +188,11 @@ def test_ripartizione_apartment_names(tmp_path):
     write_xlsx(report, out)
 
     wb = openpyxl.load_workbook(out)
-    ws = wb.worksheets[0]  # Ripartizione
-    # Row 3 should have the FC_report description for App 01
-    a3 = ws["A3"].value
-    assert a3 is not None
-    assert "Rossi" in a3  # fixture uses "App, 01 Rossi Mario"
+    ws = wb["Inquilini"]
+    assert "Rossi" in ws["A2"].value  # apt 1
+    assert "Bianchi" in ws["A3"].value  # apt 2
+    # Tenant column B still empty
+    assert ws["B2"].value is None
 
 
 def test_dati_report_full_fc_data(tmp_path):

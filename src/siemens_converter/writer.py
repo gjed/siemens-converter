@@ -112,33 +112,15 @@ def write_xlsx(report: ParsedReport, output_path: Path) -> None:
     wb.save(output_path)
 
 
-# Millesimali sheet: apartment number -> row (rows 4-13)
-_MILL_ROWS: dict[int, int] = {i: i + 3 for i in range(1, 11)}
-
-
-# Summary rows in Ripartizione: apartment N -> row N+2 (row 3=apt 1, row 4=apt 2...)
-_SUMMARY_ROWS: dict[int, int] = {i: i + 2 for i in range(1, 11)}
-
-
 def _write_apartment_names(wb: openpyxl.Workbook, report: ParsedReport) -> None:
-    """Write FC_report apartment descriptions to summary rows and millesimali."""
-    apt_names: dict[int, str] = {}
-    for ha in report.heat_allocators:
-        apt_names[ha.apartment_number] = ha.description
+    """Write apartment names to the Inquilini sheet only.
 
-    # Ripartizione: only summary rows 3-12 (other rows use formulas referencing these)
-    ws = wb.worksheets[0]
-    for apt_num, name in apt_names.items():
-        row = _SUMMARY_ROWS.get(apt_num)
-        if row is not None:
-            ws.cell(row=row, column=1, value=name)
-
-    # Tabelle millesimali
-    ws_mill = wb["Tabelle millesimali"]
-    for apt_num, name in apt_names.items():
-        row = _MILL_ROWS.get(apt_num)
-        if row is not None:
-            ws_mill.cell(row=row, column=1, value=name)
+    All apartment label cells in Ripartizione and Tabelle millesimali
+    reference Inquilini!A{row} via formulas baked into the template.
+    """
+    # Nothing to do here — names go into the Inquilini sheet,
+    # which is created by _write_inquilini_sheet.
+    pass
 
 
 def _write_inquilini_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> None:
