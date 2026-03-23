@@ -99,11 +99,13 @@ def test_afs_values(tmp_path):
     assert ws["C184"].value == 59.69
 
 
-def test_four_sheets(tmp_path):
+def test_five_sheets(tmp_path):
     out = tmp_path / "output.xlsx"
     write_xlsx(_make_report(), out)
     wb = openpyxl.load_workbook(out)
-    assert len(wb.sheetnames) == 4
+    assert len(wb.sheetnames) == 5
+    assert "Inquilini" in wb.sheetnames
+    assert "Dati Report" in wb.sheetnames
 
 
 def test_dati_report_sheet_exists(tmp_path):
@@ -146,6 +148,39 @@ def test_millesimali_names_from_report(tmp_path):
     assert ws["B4"].value is None
     assert ws["C4"].value is None
     assert ws["E4"].value is None
+
+
+def test_inquilini_sheet(tmp_path):
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out)
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Inquilini"]
+    # Header
+    assert ws["A1"].value == "Appartamento"
+    assert ws["B1"].value == "Inquilino"
+    # Apartment rows from report
+    assert ws["A2"].value == "App, 01 Rossi"
+    assert ws["A3"].value == "App, 02 Bianchi"
+    # Tenant column empty (openpyxl saves "" as None)
+    assert ws["B2"].value is None
+    assert ws["B3"].value is None
+
+
+def test_ripartizione_apartment_names(tmp_path):
+    """Apartment names from FC_report should replace 'App. XX' in Ripartizione."""
+    from siemens_converter.parser import parse_fc_report
+
+    fixture = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
+    report = parse_fc_report(fixture)
+    out = tmp_path / "output.xlsx"
+    write_xlsx(report, out)
+
+    wb = openpyxl.load_workbook(out)
+    ws = wb.worksheets[0]  # Ripartizione
+    # Row 3 should have the FC_report description for App 01
+    a3 = ws["A3"].value
+    assert a3 is not None
+    assert "Rossi" in a3  # fixture uses "App, 01 Rossi Mario"
 
 
 def test_dati_report_full_fc_data(tmp_path):

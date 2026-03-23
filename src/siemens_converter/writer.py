@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 from datetime import datetime
 from importlib.resources import files
@@ -99,8 +100,11 @@ def write_xlsx(report: ParsedReport, output_path: Path) -> None:
             continue
         ws.cell(row=rows["water"], column=3, value=wm.water_volume_m3)
 
-    # Populate Tabelle millesimali apartment names from FC_report
-    _write_millesimali_names(wb, report)
+    # Populate apartment names throughout the workbook
+    _write_apartment_names(wb, report)
+
+    # Add "Inquilini" sheet (empty tenant table for manual input)
+    _write_inquilini_sheet(wb, report)
 
     # Add "Dati Report" sheet with raw FC_report data
     _write_dati_report_sheet(wb, report)
@@ -112,14 +116,72 @@ def write_xlsx(report: ParsedReport, output_path: Path) -> None:
 _MILL_ROWS: dict[int, int] = {i: i + 3 for i in range(1, 11)}
 
 
-def _write_millesimali_names(wb: openpyxl.Workbook, report: ParsedReport) -> None:
-    """Populate apartment names in the Tabelle millesimali sheet."""
-    ws = wb["Tabelle millesimali"]
+def _write_apartment_names(wb: openpyxl.Workbook, report: ParsedReport) -> None:
+    """Replace 'App. XX' placeholders with FC_report descriptions throughout."""
+    # Build apartment number -> description map from heat allocators
+    apt_names: dict[int, str] = {}
     for ha in report.heat_allocators:
-        row = _MILL_ROWS.get(ha.apartment_number)
-        if row is None:
+        apt_names[ha.apartment_number] = ha.description
+
+    # Ripartizione sheet: replace all "App. XX" cells in column A
+    ws = wb.worksheets[0]
+    _APT_PATTERN = re.compile(r"^App[.\s]*(\d{1,2})$")
+    for r in range(1, ws.max_row + 1):
+        v = ws.cell(row=r, column=1).value
+        if not v or not isinstance(v, str):
             continue
-        ws.cell(row=row, column=1, value=ha.description)
+        m = _APT_PATTERN.match(v.strip())
+        if m:
+            apt_num = int(m.group(1))
+            name = apt_names.get(apt_num)
+            if name:
+                ws.cell(row=r, column=1).value = name
+
+    # Tabelle millesimali sheet
+    ws_mill = wb["Tabelle millesimali"]
+    for apt_num, name in apt_names.items():
+        row = _MILL_ROWS.get(apt_num)
+        if row is not None:
+            ws_mill.cell(row=row, column=1, value=name)
+
+
+def _write_inquilini_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> None:
+    """Create an 'Inquilini' sheet with apartment list and empty tenant column."""
+    ws = wb.create_sheet("Inquilini")  # Appended after other sheets
+
+    # Header row
+    ws.cell(row=1, column=1, value="Appartamento").font = _FONT_BOLD
+    ws.cell(row=1, column=1).fill = _FILL_HEADER
+    ws.cell(row=1, column=1).alignment = _ALIGN_LEFT
+    ws.cell(row=1, column=1).border = _THIN_BORDER
+
+    ws.cell(row=1, column=2, value="Inquilino").font = _FONT_BOLD
+    ws.cell(row=1, column=2).fill = _FILL_HEADER
+    ws.cell(row=1, column=2).alignment = _ALIGN_LEFT
+    ws.cell(row=1, column=2).border = _THIN_BORDER
+
+    # One row per apartment from heat allocators (sorted by apt number)
+    for i, ha in enumerate(report.heat_allocators):
+        row = i + 2
+        c = ws.cell(row=row, column=1, value=ha.description)
+        c.font = _FONT
+        c.alignment = _ALIGN_LEFT
+        c.border = _THIN_BORDER
+
+        # Empty tenant cell for manual input
+        c2 = ws.cell(row=row, column=2, value="")
+        c2.font = _FONT
+        c2.alignment = _ALIGN_LEFT
+        c2.border = _THIN_BORDER
+
+    # Column widths
+    ws.column_dimensions["A"].width = 42
+    ws.column_dimensions["B"].width = 42
+
+    # Row heights
+    ws.row_dimensions[1].height = 30
+    for i in range(len(report.heat_allocators)):
+        ws.row_dimensions[i + 2].height = 25
 
 
 # Columns visible in the original "File con dati necessari" (0-indexed)
