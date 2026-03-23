@@ -30,6 +30,9 @@ _FILL_GREEN = PatternFill(
 _FILL_YELLOW = PatternFill(
     start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid"
 )
+_FILL_ALT_ROW = PatternFill(
+    start_color="FFF2F2F2", end_color="FFF2F2F2", fill_type="solid"
+)
 
 _ALIGN_LEFT = Alignment(horizontal="left", vertical="center")
 _ALIGN_CENTER = Alignment(horizontal="center", vertical="center", wrap_text=True)
@@ -119,10 +122,46 @@ def _write_millesimali_names(wb: openpyxl.Workbook, report: ParsedReport) -> Non
         ws.cell(row=row, column=1, value=ha.description)
 
 
+# Columns visible in the original "File con dati necessari" (0-indexed)
+_VISIBLE_COLS = {0, 1, 4, 6, 12, 15, 16, 17, 24, 25, 26, 27}
+
+# Columns that get green highlight (key data)
+_GREEN_COLS = {15, 24, 26}  # heat_energy, water_volume, aux1_volume
+
+# Column that gets yellow highlight (device_description)
+_YELLOW_COL = 4
+
+# Column widths matching the original (0-indexed col -> width)
+_COL_WIDTHS = {
+    0: 7,
+    1: 7,
+    4: 40,
+    6: 16,
+    12: 16,
+    15: 13,
+    16: 7,
+    17: 13,
+    24: 14,
+    25: 7,
+    26: 14,
+    27: 7,
+}
+
+# Annotation labels for row 3 (0-indexed col -> label)
+_ANNOTATIONS = {
+    15: ("energia termica", _FILL_GREEN),
+    24: ("volume acqua sanitaria", _FILL_GREEN),
+    26: ("volume acqua fredda", _FILL_YELLOW),
+}
+
+
 def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> None:
-    """Add a 'Dati Report' sheet with the parsed FC_report data."""
+    """Add a 'Dati Report' sheet — full FC_report table with irrelevant columns hidden."""
     ws = wb.create_sheet("Dati Report")
-    num_cols = 8
+
+    headers = report.column_headers or []
+    raw_rows = report.raw_device_rows or []
+    num_cols = max(len(headers), 38)
 
     # -- Row 1: metadata labels --
     meta_labels = ["File", "Data", "Ora", "Riferimento", "Seriale", "Firmware"]
@@ -149,105 +188,102 @@ def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> Non
         c.fill = _FILL_HEADER
         c.alignment = _ALIGN_CENTER
         c.border = _THIN_BORDER
+    ws.row_dimensions[2].height = 28
 
-    # -- Row 3: annotation row (highlight key data columns) --
-    annotations = {3: "energia termica", 5: "volume acqua", 7: "volume AFS"}
-    for col, label in annotations.items():
-        c = ws.cell(row=3, column=col, value=label)
+    # -- Row 3: annotation row --
+    for col_idx, (label, fill) in _ANNOTATIONS.items():
+        c = ws.cell(row=3, column=col_idx + 1, value=label)
         c.font = _FONT_HEADER_ANNOTATION
-        c.fill = _FILL_GREEN
+        c.fill = fill
         c.alignment = _ALIGN_CENTER
         c.border = _THIN_BORDER
     ws.row_dimensions[3].height = 37
 
-    # -- Row 4: column headers --
-    headers = [
-        "Tipo",
-        "Appartamento",
-        "Energia termica",
-        "Unita",
-        "Volume acqua",
-        "Unita",
-        "Volume AFS",
-        "Unita",
-    ]
-    for col, h in enumerate(headers, 1):
-        c = ws.cell(row=4, column=col, value=h)
+    # -- Row 4: column headers (all 38 from FC_report) --
+    for col_idx, h in enumerate(headers):
+        c = ws.cell(row=4, column=col_idx + 1, value=h)
         c.font = _FONT_BOLD
         c.fill = _FILL_HEADER
         c.alignment = _ALIGN_LEFT
         c.border = _THIN_BORDER
+        if col_idx == _YELLOW_COL:
+            c.fill = _FILL_YELLOW
     ws.row_dimensions[4].height = 35
 
-    # -- Data rows --
-    row = 5
+    # -- Data rows (all raw device rows with all columns) --
+    for row_offset, raw_row in enumerate(raw_rows):
+        xl_row = 5 + row_offset
+        is_alt = row_offset % 2 == 1
 
-    for wm in report.water_meters:
-        _set_data_cell(ws, row, 1, "Acqua calda")
-        _set_data_cell(ws, row, 2, wm.description, bold=True)
-        _set_data_cell(ws, row, 5, wm.water_volume_m3, fmt="0.000", green=True)
-        _set_data_cell(ws, row, 6, "m\u00b3")
-        # Fill empty cols with border
-        for empty_col in [3, 4, 7, 8]:
-            _set_data_cell(ws, row, empty_col, None)
-        row += 1
+        for col_idx in range(min(len(raw_row), num_cols)):
+            val = raw_row[col_idx] if col_idx < len(raw_row) else ""
+            # Try to convert numeric strings
+            parsed_val = _try_parse_number(val)
 
-    for ha in report.heat_allocators:
-        _set_data_cell(ws, row, 1, "Contacalorie")
-        _set_data_cell(ws, row, 2, ha.description, bold=True)
-        _set_data_cell(ws, row, 3, ha.heat_energy_mwh, fmt="0.000", green=True)
-        _set_data_cell(ws, row, 4, "MWh")
-        _set_data_cell(ws, row, 5, None)
-        _set_data_cell(ws, row, 6, None)
-        _set_data_cell(ws, row, 7, ha.aux1_volume_m3, fmt="0.00", green=True)
-        _set_data_cell(ws, row, 8, "m\u00b3")
-        row += 1
+            c = ws.cell(row=xl_row, column=col_idx + 1, value=parsed_val)
+            c.border = _THIN_BORDER
 
-    for cm in report.central_meters:
-        _set_data_cell(ws, row, 1, "Centrale")
-        _set_data_cell(ws, row, 2, cm.description, bold=True)
-        _set_data_cell(ws, row, 3, cm.heat_energy_kwh, green=True)
-        _set_data_cell(ws, row, 4, "kWh")
-        for empty_col in [5, 6, 7, 8]:
-            _set_data_cell(ws, row, empty_col, None)
-        row += 1
+            # Styling
+            if col_idx in _GREEN_COLS and parsed_val not in (None, "", 0, 0.0):
+                c.font = _FONT_BOLD
+                c.fill = _FILL_GREEN
+            elif col_idx == _YELLOW_COL:
+                c.font = _FONT_BOLD
+                c.fill = _FILL_YELLOW if not is_alt else _FILL_YELLOW
+            elif is_alt:
+                c.font = _FONT
+                c.fill = _FILL_ALT_ROW
+            else:
+                c.font = _FONT
 
-    # -- Column widths --
-    col_widths = {1: 14, 2: 35, 3: 16, 4: 8, 5: 14, 6: 8, 7: 14, 8: 8}
-    for col_idx, width in col_widths.items():
-        ws.column_dimensions[get_column_letter(col_idx)].width = width
+            # Alignment
+            if isinstance(parsed_val, (int, float)):
+                c.alignment = _ALIGN_RIGHT
+                if isinstance(parsed_val, float):
+                    c.number_format = "0.000"
+            else:
+                c.alignment = _ALIGN_LEFT
 
-    # -- Freeze panes: freeze header rows --
+        ws.row_dimensions[xl_row].height = 25
+
+    # -- Column widths and visibility --
+    for col_idx in range(num_cols):
+        letter = get_column_letter(col_idx + 1)
+        if col_idx in _COL_WIDTHS:
+            ws.column_dimensions[letter].width = _COL_WIDTHS[col_idx]
+        else:
+            ws.column_dimensions[letter].width = 12
+        # Hide columns not in the visible set
+        if col_idx not in _VISIBLE_COLS:
+            ws.column_dimensions[letter].hidden = True
+
+    # -- Freeze panes below headers --
     ws.freeze_panes = "A5"
 
-    # -- Auto-filter on data table --
-    last_row = row - 1
-    ws.auto_filter.ref = f"A4:H{last_row}"
+    # -- Auto-filter on the data table --
+    last_row = 4 + len(raw_rows)
+    last_col_letter = get_column_letter(num_cols)
+    if raw_rows:
+        ws.auto_filter.ref = f"A4:{last_col_letter}{last_row}"
 
 
-def _set_data_cell(
-    ws: openpyxl.worksheet.worksheet.Worksheet,  # type: ignore[name-defined]
-    row: int,
-    col: int,
-    value: object,
-    *,
-    bold: bool = False,
-    fmt: str | None = None,
-    green: bool = False,
-) -> None:
-    """Write a value to a cell with consistent data-row styling."""
-    c = ws.cell(row=row, column=col, value=value)
-    c.font = _FONT_BOLD if bold else _FONT
-    c.border = _THIN_BORDER
-    if green:
-        c.fill = _FILL_GREEN
-        c.font = _FONT_BOLD
-    if fmt:
-        c.number_format = fmt
-    if isinstance(value, (int, float)):
-        c.alignment = _ALIGN_RIGHT
-    else:
-        c.alignment = _ALIGN_LEFT
+def _try_parse_number(val: str) -> str | int | float:
+    """Try to parse a string as int or float (Italian comma decimals)."""
+    if not isinstance(val, str):
+        return val
+    val = val.strip()
+    if not val:
+        return ""
+    # Try int first
+    try:
+        return int(val)
+    except ValueError:
+        pass
+    # Try float with comma decimal
+    try:
+        return float(val.replace(",", "."))
+    except ValueError:
+        return val
 
 
 def _parse_reading_date(report: ParsedReport) -> datetime | None:

@@ -133,9 +133,29 @@ def parse_fc_report(path: str | Path) -> ParsedReport:
     water_meters.sort(key=lambda m: m.apartment_number)
     heat_allocators.sort(key=lambda m: m.apartment_number)
 
+    # Preserve raw data for the Dati Report sheet
+    column_headers = rows[3] if len(rows) > 3 else []
+    # Sort raw rows: water meters first, then heat allocators, then central
+    water_rows = [r for r in rows[4:] if r[5].strip() == "Acqua calda"]
+    heat_rows = [r for r in rows[4:] if r[5].strip() == "Contacalorie"]
+    central_rows = [r for r in rows[4:] if r[3].strip() == "contacalorie CT"]
+
+    # Sort apartment rows by apartment number
+    def _apt_sort_key(r: list[str]) -> int:
+        try:
+            return extract_apartment_number(r[4])
+        except ValueError:
+            return 9999
+
+    water_rows.sort(key=_apt_sort_key)
+    heat_rows.sort(key=_apt_sort_key)
+    raw_device_rows = water_rows + heat_rows + central_rows
+
     return ParsedReport(
         header=header,
         central_meters=central_meters,
         water_meters=water_meters,
         heat_allocators=heat_allocators,
+        column_headers=column_headers,
+        raw_device_rows=raw_device_rows,
     )

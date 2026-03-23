@@ -118,63 +118,12 @@ def test_dati_report_metadata(tmp_path):
     write_xlsx(_make_report(), out)
     wb = openpyxl.load_workbook(out)
     ws = wb["Dati Report"]
-    # Row 1: metadata labels
     assert ws["A1"].value == "File"
     assert ws["B1"].value == "Data"
     assert ws["E1"].value == "Seriale"
-    # Row 2: metadata values
     assert ws["A2"].value == "FC_report.xls"
     assert ws["B2"].value == "2026-03-14"
     assert ws["E2"].value == "EV123"
-
-
-def test_dati_report_column_headers(tmp_path):
-    out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
-    wb = openpyxl.load_workbook(out)
-    ws = wb["Dati Report"]
-    # Row 4: column headers (row 3 is annotations)
-    assert ws["A4"].value == "Tipo"
-    assert ws["B4"].value == "Appartamento"
-    assert ws["C4"].value == "Energia termica"
-    assert ws["E4"].value == "Volume acqua"
-    assert ws["G4"].value == "Volume AFS"
-
-
-def test_dati_report_water_meters(tmp_path):
-    out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
-    wb = openpyxl.load_workbook(out)
-    ws = wb["Dati Report"]
-    # Water meters start at row 5
-    assert ws["A5"].value == "Acqua calda"
-    assert ws["B5"].value == "App, 01 Rossi"
-    assert ws["E5"].value == 31.613
-
-
-def test_dati_report_heat_allocators(tmp_path):
-    out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
-    wb = openpyxl.load_workbook(out)
-    ws = wb["Dati Report"]
-    # Heat allocators after 2 water meters: row 7
-    assert ws["A7"].value == "Contacalorie"
-    assert ws["B7"].value == "App, 01 Rossi"
-    assert ws["C7"].value == 5.243
-    assert ws["D7"].value == "MWh"
-    assert ws["G7"].value == 45.72
-
-
-def test_dati_report_central_meters(tmp_path):
-    out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
-    wb = openpyxl.load_workbook(out)
-    ws = wb["Dati Report"]
-    # Central meters after 2 water + 2 heat = row 9
-    assert ws["A9"].value == "Centrale"
-    assert ws["B9"].value == "Riscaldamento"
-    assert ws["C9"].value == 29213
-    assert ws["D9"].value == "kWh"
 
 
 def test_millesimali_names_from_report(tmp_path):
@@ -182,30 +131,97 @@ def test_millesimali_names_from_report(tmp_path):
     write_xlsx(_make_report(), out)
     wb = openpyxl.load_workbook(out)
     ws = wb["Tabelle millesimali"]
-    # App 01 and 02 names should come from heat allocators
     assert ws["A4"].value == "App, 01 Rossi"
     assert ws["A5"].value == "App, 02 Bianchi"
-    # Subalterno should remain empty (not populated by tool)
     assert ws["B4"].value is None
-    # Energy values should remain empty (not populated by tool)
     assert ws["C4"].value is None
     assert ws["E4"].value is None
 
 
-def test_dati_report_formatting(tmp_path):
+def test_dati_report_full_fc_data(tmp_path):
+    """Parse fixture -> verify Dati Report has all 38 columns from FC_report."""
+    from siemens_converter.parser import parse_fc_report
+
+    fixture = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
+    report = parse_fc_report(fixture)
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(report, out)
+
     wb = openpyxl.load_workbook(out)
     ws = wb["Dati Report"]
-    # Header cells should be bold with header fill
+
+    # Row 4 should have all FC_report column headers
+    assert ws.cell(row=4, column=1).value == "count"
+    assert ws.cell(row=4, column=5).value == "device_description"  # col E
+    assert ws.cell(row=4, column=16).value == "heat_energy"  # col P
+    assert ws.cell(row=4, column=25).value == "water_volume"  # col Y
+    assert ws.cell(row=4, column=27).value == "aux1_volume"  # col AA
+
+    # Data starts at row 5 -- water meters first (10), then heat (10), then central (2)
+    # First water meter
+    assert ws.cell(row=5, column=6).value == "Acqua calda"  # device_detail = col F
+    # First heat allocator (after 10 water meters)
+    assert ws.cell(row=15, column=6).value == "Contacalorie"
+    # Central meters at end (after 10 water + 10 heat = row 25)
+    desc_25 = ws.cell(row=25, column=5).value
+    assert desc_25 in ("Riscaldamento", "Sanitario")
+
+
+def test_dati_report_hidden_columns(tmp_path):
+    """Irrelevant columns should be hidden."""
+    from siemens_converter.parser import parse_fc_report
+
+    fixture = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
+    report = parse_fc_report(fixture)
+    out = tmp_path / "output.xlsx"
+    write_xlsx(report, out)
+
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Dati Report"]
+
+    # Visible columns: A(1), B(2), E(5), G(7), M(13), P(16), Q(17), R(18), Y(25), Z(26), AA(27), AB(28)
+    assert ws.column_dimensions["A"].hidden is False
+    assert ws.column_dimensions["E"].hidden is False
+    assert ws.column_dimensions["P"].hidden is False
+    # Hidden columns
+    assert ws.column_dimensions["C"].hidden is True  # device_serial_number
+    assert ws.column_dimensions["D"].hidden is True  # name_device
+    assert ws.column_dimensions["H"].hidden is True  # wired/wireless
+
+
+def test_dati_report_formatting(tmp_path):
+    """Verify formatting: green highlights, alternating rows, freeze panes."""
+    from siemens_converter.parser import parse_fc_report
+
+    fixture = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
+    report = parse_fc_report(fixture)
+    out = tmp_path / "output.xlsx"
+    write_xlsx(report, out)
+
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Dati Report"]
+
+    # Header row bold
     assert ws["A1"].font.bold is True
-    assert ws["A4"].font.bold is True
-    # Green highlights on key data values
-    assert ws["E5"].fill.fgColor.rgb == "FF99FFCC"  # water volume green
-    assert ws["C7"].fill.fgColor.rgb == "FF99FFCC"  # heat energy green
-    assert ws["G7"].fill.fgColor.rgb == "FF99FFCC"  # AFS volume green
-    # Freeze panes at row 5
+    assert ws.cell(row=4, column=1).font.bold is True
+
+    # Green highlight on water_volume (col Y=25) for first water meter (row 5)
+    water_cell = ws.cell(row=5, column=25)
+    assert water_cell.fill.fgColor.rgb == "FF99FFCC"
+
+    # Green highlight on heat_energy (col P=16) for first heat allocator (row 15)
+    heat_cell = ws.cell(row=15, column=16)
+    assert heat_cell.fill.fgColor.rgb == "FF99FFCC"
+
+    # Alternating row fill on even data rows
+    alt_cell = ws.cell(row=6, column=1)  # second data row
+    assert alt_cell.fill.fgColor.rgb == "FFF2F2F2"
+
+    # Freeze panes
     assert ws.freeze_panes == "A5"
+
+    # Row heights
+    assert ws.row_dimensions[5].height == 25
 
 
 def test_full_pipeline(tmp_path):

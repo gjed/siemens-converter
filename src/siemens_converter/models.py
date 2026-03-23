@@ -54,6 +54,8 @@ class ParsedReport:
     central_meters: list[CentralMeter]
     water_meters: list[WaterMeter]
     heat_allocators: list[HeatAllocator]
+    column_headers: list[str] | None = None
+    raw_device_rows: list[list[str]] | None = None
 
 
 def extract_apartment_number(description: str) -> int:
