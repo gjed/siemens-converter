@@ -46,7 +46,13 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Build binary
-        run: pyinstaller --onefile --paths src --name siemens-converter scripts/pyinstaller_entry.py
+        shell: bash
+        run: |
+          OPTS="--onefile --paths src --name siemens-converter"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            OPTS="$OPTS --noconsole"
+          fi
+          pyinstaller $OPTS scripts/pyinstaller_entry.py
 
       - name: Rename artifact
         shell: bash
@@ -98,3 +104,53 @@ jobs:
           files: |
             artifacts/siemens-converter-windows-${{ github.ref_name }}.exe
             artifacts/siemens-converter-linux-${{ github.ref_name }}
+
+      - name: Clean up old release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IS_PRERELEASE: ${{ steps.prerelease.outputs.is_prerelease }}
+          CURRENT_TAG: ${{ github.ref_name }}
+        run: |
+          # Delete assets from older releases based on release type:
+          #   RC release  → strip assets from all OTHER pre-releases
+          #   Stable      → strip assets from ALL pre-releases
+          #                + keep only the 3 newest stable releases with assets
+
+          delete_assets_for_release() {
+            local tag="$1"
+            local assets
+            assets=$(gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null) || return 0
+            if [[ -n "$assets" ]]; then
+              for asset in $assets; do
+                echo "  Deleting asset: $asset from $tag"
+                gh release delete-asset "$tag" "$asset" --yes
+              done
+            fi
+          }
+
+          # Get all releases as JSON
+          releases=$(gh release list --limit 100 --json tagName,isPrerelease)
+
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            # RC release: delete assets from all other pre-releases
+            echo "RC release ($CURRENT_TAG): cleaning older pre-release assets..."
+            echo "$releases" | jq -r '.[] | select(.isPrerelease == true) | .tagName' | while read -r tag; do
+              if [[ "$tag" != "$CURRENT_TAG" ]]; then
+                delete_assets_for_release "$tag"
+              fi
+            done
+          else
+            # Stable release: delete ALL pre-release assets
+            echo "Stable release ($CURRENT_TAG): cleaning all pre-release assets..."
+            echo "$releases" | jq -r '.[] | select(.isPrerelease == true) | .tagName' | while read -r tag; do
+              delete_assets_for_release "$tag"
+            done
+
+            # Keep only 3 newest stable releases with assets
+            echo "Keeping only 3 newest stable releases with assets..."
+            echo "$releases" | jq -r '.[] | select(.isPrerelease == false) | .tagName' | tail -n +4 | while read -r tag; do
+              delete_assets_for_release "$tag"
+            done
+          fi
+
+          echo "Cleanup complete."
