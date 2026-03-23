@@ -116,28 +116,24 @@ def write_xlsx(report: ParsedReport, output_path: Path) -> None:
 _MILL_ROWS: dict[int, int] = {i: i + 3 for i in range(1, 11)}
 
 
+# Summary rows in Ripartizione: apartment N -> row N+2 (row 3=apt 1, row 4=apt 2...)
+_SUMMARY_ROWS: dict[int, int] = {i: i + 2 for i in range(1, 11)}
+
+
 def _write_apartment_names(wb: openpyxl.Workbook, report: ParsedReport) -> None:
-    """Replace 'App. XX' placeholders with FC_report descriptions throughout."""
-    # Build apartment number -> description map from heat allocators
+    """Write FC_report apartment descriptions to summary rows and millesimali."""
     apt_names: dict[int, str] = {}
     for ha in report.heat_allocators:
         apt_names[ha.apartment_number] = ha.description
 
-    # Ripartizione sheet: replace all "App. XX" cells in column A
+    # Ripartizione: only summary rows 3-12 (other rows use formulas referencing these)
     ws = wb.worksheets[0]
-    _APT_PATTERN = re.compile(r"^App[.\s]*(\d{1,2})$")
-    for r in range(1, ws.max_row + 1):
-        v = ws.cell(row=r, column=1).value
-        if not v or not isinstance(v, str):
-            continue
-        m = _APT_PATTERN.match(v.strip())
-        if m:
-            apt_num = int(m.group(1))
-            name = apt_names.get(apt_num)
-            if name:
-                ws.cell(row=r, column=1).value = name
+    for apt_num, name in apt_names.items():
+        row = _SUMMARY_ROWS.get(apt_num)
+        if row is not None:
+            ws.cell(row=row, column=1, value=name)
 
-    # Tabelle millesimali sheet
+    # Tabelle millesimali
     ws_mill = wb["Tabelle millesimali"]
     for apt_num, name in apt_names.items():
         row = _MILL_ROWS.get(apt_num)

@@ -68,6 +68,17 @@ def test_template_tabelle_millesimali_data_cleared():
     assert ws["F4"].value is not None
 
 
+def test_template_tenant_rows_reference_inquilini():
+    wb = _load_template()
+    ws = wb.worksheets[0]
+    # Row 78 (App 01 tenant) should be a formula referencing Inquilini
+    assert ws["A78"].value == "=Inquilini!B2"
+    # Row 103 (App 01 tenant in detail section) should also reference Inquilini
+    assert ws["A103"].value == "=Inquilini!B2"
+    # Row 130 (App 01 tenant in water section)
+    assert ws["A130"].value == "=Inquilini!B2"
+
+
 def test_template_tabella_2026_eur_cleared():
     wb = _load_template()
     ws = wb["Tabella_2026"]
