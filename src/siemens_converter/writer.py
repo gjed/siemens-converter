@@ -31,7 +31,7 @@ _FILL_YELLOW = PatternFill(
     start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid"
 )
 _FILL_ALT_ROW = PatternFill(
-    start_color="FFF2F2F2", end_color="FFF2F2F2", fill_type="solid"
+    start_color="FFE8E8E8", end_color="FFE8E8E8", fill_type="solid"
 )
 
 _ALIGN_LEFT = Alignment(horizontal="left", vertical="center")
@@ -131,28 +131,39 @@ _GREEN_COLS = {15, 24, 26}  # heat_energy, water_volume, aux1_volume
 # Column that gets yellow highlight (device_description)
 _YELLOW_COL = 4
 
-# Column widths matching the original (0-indexed col -> width)
-_COL_WIDTHS = {
-    0: 7,
-    1: 7,
+# Minimum column widths for visible columns (0-indexed col -> width)
+_MIN_COL_WIDTHS: dict[int, float] = {
+    0: 11,
+    1: 11,
     4: 40,
-    6: 16,
+    6: 32,
     12: 16,
-    15: 13,
-    16: 7,
-    17: 13,
+    15: 14,
+    16: 8,
+    17: 14,
     24: 14,
-    25: 7,
+    25: 8,
     26: 14,
-    27: 7,
+    27: 8,
 }
 
-# Annotation labels for row 3 (0-indexed col -> label)
+# Annotation labels for row 3 (0-indexed col -> label, fill)
 _ANNOTATIONS = {
     15: ("energia termica", _FILL_GREEN),
     24: ("volume acqua sanitaria", _FILL_GREEN),
     26: ("volume acqua fredda", _FILL_YELLOW),
 }
+
+# Metadata: placed in the FC_report's own column positions (0-indexed)
+_META_FIELDS: list[tuple[int, str]] = [
+    (0, "Nome File"),
+    (1, "Data Report"),
+    (2, "Ora Report"),
+    (3, "Riferimento Impianto"),
+    (4, "Versione firmware"),
+    (5, "Totale dispositivi cablati"),
+    (7, "Numero di serie"),
+]
 
 
 def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> None:
@@ -163,32 +174,37 @@ def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> Non
     raw_rows = report.raw_device_rows or []
     num_cols = max(len(headers), 38)
 
-    # -- Row 1: metadata labels --
-    meta_labels = ["File", "Data", "Ora", "Riferimento", "Seriale", "Firmware"]
     meta_values = [
         report.header.filename,
         report.header.report_date,
         report.header.report_time,
         report.header.reference,
-        report.header.serial,
         report.header.firmware,
+        str(report.header.total_wired),
+        report.header.serial,
     ]
-    for col, label in enumerate(meta_labels, 1):
-        c = ws.cell(row=1, column=col, value=label)
+
+    # -- Row 1: metadata labels in the FC_report column positions --
+    for i, (col_idx, label) in enumerate(_META_FIELDS):
+        c = ws.cell(row=1, column=col_idx + 1, value=label)
         c.font = _FONT_BOLD
         c.fill = _FILL_HEADER
         c.alignment = _ALIGN_CENTER
         c.border = _THIN_BORDER
     ws.row_dimensions[1].height = 35
 
-    # -- Row 2: metadata values --
-    for col, val in enumerate(meta_values, 1):
-        c = ws.cell(row=2, column=col, value=val)
+    # -- Row 2: metadata values with merged cells for long values --
+    for i, (col_idx, _) in enumerate(_META_FIELDS):
+        c = ws.cell(row=2, column=col_idx + 1, value=meta_values[i])
         c.font = _FONT
         c.fill = _FILL_HEADER
         c.alignment = _ALIGN_CENTER
         c.border = _THIN_BORDER
-    ws.row_dimensions[2].height = 28
+    # Merge A2:B2 for the long filename
+    ws.merge_cells("A2:B2")
+    # Merge E2:F2 for firmware string
+    ws.merge_cells("E2:F2")
+    ws.row_dimensions[2].height = 40
 
     # -- Row 3: annotation row --
     for col_idx, (label, fill) in _ANNOTATIONS.items():
@@ -210,6 +226,11 @@ def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> Non
             c.fill = _FILL_YELLOW
     ws.row_dimensions[4].height = 35
 
+    # -- Track max content width per column for auto-fit --
+    col_max_width: dict[int, float] = {}
+    for col_idx, h in enumerate(headers):
+        col_max_width[col_idx] = len(str(h)) * 1.2 if h else 8
+
     # -- Data rows (all raw device rows with all columns) --
     for row_offset, raw_row in enumerate(raw_rows):
         xl_row = 5 + row_offset
@@ -217,11 +238,17 @@ def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> Non
 
         for col_idx in range(min(len(raw_row), num_cols)):
             val = raw_row[col_idx] if col_idx < len(raw_row) else ""
-            # Try to convert numeric strings
             parsed_val = _try_parse_number(val)
 
             c = ws.cell(row=xl_row, column=col_idx + 1, value=parsed_val)
             c.border = _THIN_BORDER
+
+            # Track content width
+            content_len = len(str(parsed_val)) * 1.2 + 2 if parsed_val else 0
+            col_max_width[col_idx] = max(
+                col_max_width.get(col_idx, 0),
+                content_len,
+            )
 
             # Styling
             if col_idx in _GREEN_COLS and parsed_val not in (None, "", 0, 0.0):
@@ -229,7 +256,6 @@ def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> Non
                 c.fill = _FILL_GREEN
             elif col_idx == _YELLOW_COL:
                 c.font = _FONT_BOLD
-                c.fill = _FILL_YELLOW if not is_alt else _FILL_YELLOW
             elif is_alt:
                 c.font = _FONT
                 c.fill = _FILL_ALT_ROW
@@ -244,16 +270,14 @@ def _write_dati_report_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> Non
             else:
                 c.alignment = _ALIGN_LEFT
 
-        ws.row_dimensions[xl_row].height = 25
+        ws.row_dimensions[xl_row].height = 27
 
-    # -- Column widths and visibility --
+    # -- Column widths: use max(min_width, content_width) and visibility --
     for col_idx in range(num_cols):
         letter = get_column_letter(col_idx + 1)
-        if col_idx in _COL_WIDTHS:
-            ws.column_dimensions[letter].width = _COL_WIDTHS[col_idx]
-        else:
-            ws.column_dimensions[letter].width = 12
-        # Hide columns not in the visible set
+        min_w = _MIN_COL_WIDTHS.get(col_idx, 12)
+        content_w = col_max_width.get(col_idx, 8)
+        ws.column_dimensions[letter].width = max(min_w, content_w)
         if col_idx not in _VISIBLE_COLS:
             ws.column_dimensions[letter].hidden = True
 

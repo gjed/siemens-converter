@@ -118,12 +118,14 @@ def test_dati_report_metadata(tmp_path):
     write_xlsx(_make_report(), out)
     wb = openpyxl.load_workbook(out)
     ws = wb["Dati Report"]
-    assert ws["A1"].value == "File"
-    assert ws["B1"].value == "Data"
-    assert ws["E1"].value == "Seriale"
+    # Row 1: labels in FC_report column positions
+    assert ws["A1"].value == "Nome File"
+    assert ws["B1"].value == "Data Report"
+    assert ws["E1"].value == "Versione firmware"
+    assert ws["H1"].value == "Numero di serie"
+    # Row 2: values (A2:B2 merged for filename)
     assert ws["A2"].value == "FC_report.xls"
-    assert ws["B2"].value == "2026-03-14"
-    assert ws["E2"].value == "EV123"
+    assert ws["H2"].value == "EV123"
 
 
 def test_millesimali_names_from_report(tmp_path):
@@ -215,13 +217,13 @@ def test_dati_report_formatting(tmp_path):
 
     # Alternating row fill on even data rows
     alt_cell = ws.cell(row=6, column=1)  # second data row
-    assert alt_cell.fill.fgColor.rgb == "FFF2F2F2"
+    assert alt_cell.fill.fgColor.rgb == "FFE8E8E8"
 
     # Freeze panes
     assert ws.freeze_panes == "A5"
 
     # Row heights
-    assert ws.row_dimensions[5].height == 25
+    assert ws.row_dimensions[5].height == 27
 
 
 def test_full_pipeline(tmp_path):
