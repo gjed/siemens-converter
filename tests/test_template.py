@@ -73,11 +73,17 @@ def test_template_tabelle_millesimali_data_cleared():
 def test_template_apartment_cells_reference_inquilini():
     wb = _load_template()
     ws = wb.worksheets[0]
-    # All apartment cells should be formulas referencing Inquilini!A{row}
-    assert ws["A3"].value == "=Inquilini!A2"  # summary apt 1
-    assert ws["A78"].value == "=Inquilini!A2"  # heat section apt 1
-    assert ws["A102"].value == "=Inquilini!A2"  # detail section apt 1
-    assert ws["A130"].value == "=Inquilini!A2"  # water section apt 1
+    # Summary: owner only (column A)
+    assert ws["A3"].value == "=Inquilini!A2"  # apt 1 owner
+    # Heat section 78-95: first row = apt 1 tenant (B), then pairs
+    assert ws["A78"].value == "=Inquilini!B2"  # apt 1 tenant
+    assert ws["A79"].value == "=Inquilini!A3"  # apt 2 owner
+    assert ws["A80"].value == "=Inquilini!B3"  # apt 2 tenant
+    # Detail sections: owner (A) then tenant (B) per apartment
+    assert ws["A102"].value == "=Inquilini!A2"  # apt 1 owner
+    assert ws["A103"].value == "=Inquilini!B2"  # apt 1 tenant
+    assert ws["A129"].value == "=Inquilini!A2"  # water apt 1 owner
+    assert ws["A130"].value == "=Inquilini!B2"  # water apt 1 tenant
 
 
 def test_template_tabella_2026_eur_cleared():

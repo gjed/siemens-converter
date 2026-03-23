@@ -172,10 +172,12 @@ def test_ripartizione_references_inquilini(tmp_path):
     write_xlsx(_make_report(), out)
     wb = openpyxl.load_workbook(out)
     ws = wb.worksheets[0]
-    # Summary row 3 (apt 1) should reference Inquilini!A2
+    # Summary row 3 (apt 1) = owner -> Inquilini!A2
     assert ws["A3"].value == "=Inquilini!A2"
-    # Detail row 102 (apt 1) should also reference Inquilini
+    # Detail row 102 (apt 1 owner) -> Inquilini!A2
     assert ws["A102"].value == "=Inquilini!A2"
+    # Detail row 103 (apt 1 tenant) -> Inquilini!B2
+    assert ws["A103"].value == "=Inquilini!B2"
 
 
 def test_inquilini_has_fc_report_names(tmp_path):
