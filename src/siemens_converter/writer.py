@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import shutil
+import sys
 from datetime import datetime
 from importlib.resources import files
 from pathlib import Path
@@ -61,9 +62,21 @@ APT_ROWS: dict[int, dict[str, int]] = {
 }
 
 
+def _get_template_path() -> Path:
+    """Locate template.xlsx — works both installed and in PyInstaller bundles."""
+    # PyInstaller --add-data extracts to sys._MEIPASS
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        p = Path(meipass) / "siemens_converter" / "template.xlsx"
+        if p.exists():
+            return p
+    # Normal installation: use importlib.resources
+    return Path(str(files("siemens_converter").joinpath("template.xlsx")))
+
+
 def write_xlsx(report: ParsedReport, output_path: Path) -> None:
     """Write parsed report data into a copy of the template XLSX."""
-    template = files("siemens_converter").joinpath("template.xlsx")
+    template = _get_template_path()
     shutil.copy(str(template), str(output_path))
 
     wb = openpyxl.load_workbook(output_path)

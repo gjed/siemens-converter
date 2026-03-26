@@ -48,7 +48,12 @@ jobs:
       - name: Build binary
         shell: bash
         run: |
+          SEP=":"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            SEP=";"
+          fi
           OPTS="--onefile --paths src --name siemens-converter"
+          OPTS="$OPTS --add-data src/siemens_converter/template.xlsx${SEP}siemens_converter"
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             OPTS="$OPTS --noconsole"
           fi

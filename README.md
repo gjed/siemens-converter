@@ -36,7 +36,9 @@ Build a standalone executable for non-technical users:
 
 ```bash
 pip install -e ".[dev]"
-pyinstaller --onefile --paths src --name siemens-converter scripts/pyinstaller_entry.py
+pyinstaller --onefile --paths src --name siemens-converter \
+  --add-data "src/siemens_converter/template.xlsx:siemens_converter" \
+  scripts/pyinstaller_entry.py
 ```
 
 The `.exe` lands in `dist/`. Users drag an FC_report `.xls` onto it -- the XLSX appears next to the input file.
