@@ -144,7 +144,15 @@ def main() -> None:
 
         if _has_console():
             print(f"Reading static data from {static_path.name} ...")
-        static_data = parse_static_data(static_path)
+        try:
+            static_data = parse_static_data(static_path)
+        except Exception as exc:
+            msg = f"Errore nel file dati statici: {exc}"
+            if _has_console():
+                print(msg)
+            else:
+                _msgbox("Errore", msg)
+            sys.exit(1)
 
     date_safe = report.header.report_date.replace("/", "-")
     out_name = f"Riparto_{report.header.serial}_{date_safe}.xlsx"
