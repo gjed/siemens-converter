@@ -25,8 +25,12 @@ This tool converts **Siemens FC_report** files (HTML-as-XLS exported by the Siem
 
 ```bash
 pip install -e .
-python -m siemens_converter path/to/FC_report.xls
+python -m siemens_converter path/to/FC_report.xls [path/to/static_data.xlsx]
 ```
+
+The optional second argument is a static data file with tenant names, millesimali, costs, meter readings, and previous-period readings. See the included `static_data_template.xlsx` for the expected format.
+
+> Il secondo argomento opzionale e un file di dati statici con nomi inquilini, millesimali, costi, letture contatori e letture precedenti. Vedere il template `static_data_template.xlsx` incluso per il formato atteso.
 
 ## Windows (.exe)
 
@@ -38,6 +42,7 @@ Build a standalone executable for non-technical users:
 pip install -e ".[dev]"
 pyinstaller --onefile --paths src --name siemens-converter \
   --add-data "src/siemens_converter/template.xlsx:siemens_converter" \
+  --add-data "src/siemens_converter/static_data_template.xlsx:siemens_converter" \
   scripts/pyinstaller_entry.py
 ```
 
@@ -56,13 +61,15 @@ pytest
 
 ```text
 src/siemens_converter/
-  __main__.py    -> CLI entry point (drag-and-drop)
-  models.py      -> Data classes (no I/O)
-  parser.py      -> FC_report HTML parsing
-  writer.py      -> XLSX generation (inject readings into template)
-  template.xlsx  -> Embedded output template
+  __main__.py                -> CLI entry point (drag-and-drop, two-file input)
+  models.py                  -> Data classes (no I/O)
+  parser.py                  -> FC_report HTML parsing
+  static_reader.py           -> Static data XLSX parsing
+  writer.py                  -> XLSX generation (inject readings into template)
+  template.xlsx              -> Embedded output template
+  static_data_template.xlsx  -> Template for static condominium data input
 tests/
-  fixtures/      -> Anonymized test FC_report
+  fixtures/                  -> Anonymized test data (FC_report + static data)
 ```
 
 See [docs/development.md](docs/development.md) for module responsibilities.
