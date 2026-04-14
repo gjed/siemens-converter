@@ -1,9 +1,9 @@
-"""Data classes for Siemens report structures (no I/O)."""
+"""Data classes for Siemens report structures and static condominium data (no I/O)."""
 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -56,6 +56,55 @@ class ParsedReport:
     heat_allocators: list[HeatAllocator]
     column_headers: list[str] | None = None
     raw_device_rows: list[list[str]] | None = None
+
+
+# -- Static condominium data (non-Siemens, from administrator's records) --
+
+
+@dataclass
+class ApartmentInfo:
+    apartment_number: int
+    proprietario: str
+    inquilino: str
+
+
+@dataclass
+class Millesimali:
+    apartment_number: int
+    subalterno: int
+    heat_energy_kwh: float
+    water_energy_kwh: float
+
+
+@dataclass
+class CostItem:
+    label: str
+    amount: float
+
+
+@dataclass
+class MeterReading:
+    name: str
+    unit: str
+    initial: float
+    final: float
+
+
+@dataclass
+class PreviousReading:
+    apartment_number: int
+    heat_kwh: int
+    water_m3: float
+    cold_water_m3: float
+
+
+@dataclass
+class StaticData:
+    apartments: list[ApartmentInfo] = field(default_factory=list)
+    millesimali: list[Millesimali] = field(default_factory=list)
+    costs: list[CostItem] = field(default_factory=list)
+    meters: list[MeterReading] = field(default_factory=list)
+    previous_readings: list[PreviousReading] = field(default_factory=list)
 
 
 def extract_apartment_number(description: str) -> int:
