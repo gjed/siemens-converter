@@ -13,7 +13,7 @@ import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from siemens_converter.models import ParsedReport
+from siemens_converter.models import ParsedReport, StaticData
 
 # -- Styles matching the original "File con dati necessari" formatting --
 
@@ -74,8 +74,29 @@ def _get_template_path() -> Path:
     return Path(str(files("siemens_converter").joinpath("template.xlsx")))
 
 
-def write_xlsx(report: ParsedReport, output_path: Path) -> None:
-    """Write parsed report data into a copy of the template XLSX."""
+def get_static_template_path() -> Path:
+    """Locate static_data_template.xlsx — for users to copy and populate.
+
+    Works both installed and in PyInstaller bundles.
+    """
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        p = Path(meipass) / "siemens_converter" / "static_data_template.xlsx"
+        if p.exists():
+            return p
+    return Path(str(files("siemens_converter").joinpath("static_data_template.xlsx")))
+
+
+def write_xlsx(
+    report: ParsedReport,
+    output_path: Path,
+    static_data: StaticData | None = None,
+) -> None:
+    """Write parsed report data into a copy of the template XLSX.
+
+    When *static_data* is provided, tenant names, millesimali, costs,
+    meter readings, and previous-period readings are also injected.
+    """
     template = _get_template_path()
     shutil.copy(str(template), str(output_path))
 
@@ -113,11 +134,15 @@ def write_xlsx(report: ParsedReport, output_path: Path) -> None:
             continue
         ws.cell(row=rows["water"], column=3, value=wm.water_volume_m3)
 
+    # Inject static data into existing sheets (before Inquilini creation)
+    if static_data is not None:
+        _inject_static_data(wb, static_data)
+
     # Populate apartment names throughout the workbook
     _write_apartment_names(wb, report)
 
-    # Add "Inquilini" sheet (empty tenant table for manual input)
-    _write_inquilini_sheet(wb, report)
+    # Add "Inquilini" sheet (apartment + tenant table)
+    _write_inquilini_sheet(wb, report, static_data)
 
     # Add "Dati Report" sheet with raw FC_report data
     _write_dati_report_sheet(wb, report)
@@ -136,9 +161,23 @@ def _write_apartment_names(wb: openpyxl.Workbook, report: ParsedReport) -> None:
     pass
 
 
-def _write_inquilini_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> None:
-    """Create an 'Inquilini' sheet with apartment list and empty tenant column."""
+def _write_inquilini_sheet(
+    wb: openpyxl.Workbook,
+    report: ParsedReport,
+    static_data: StaticData | None = None,
+) -> None:
+    """Create an 'Inquilini' sheet with apartment list and tenant names.
+
+    Column A: apartment description (from FC_report heat allocators)
+    Column B: tenant name/description (from static_data if available, else empty)
+    """
     ws = wb.create_sheet("Inquilini")  # Appended after other sheets
+
+    # Build lookup: apartment_number -> inquilino string
+    tenant_lookup: dict[int, str] = {}
+    if static_data is not None:
+        for apt in static_data.apartments:
+            tenant_lookup[apt.apartment_number] = apt.inquilino
 
     # Header row
     ws.cell(row=1, column=1, value="Appartamento").font = _FONT_BOLD
@@ -159,8 +198,9 @@ def _write_inquilini_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> None:
         c.alignment = _ALIGN_LEFT
         c.border = _THIN_BORDER
 
-        # Empty tenant cell for manual input
-        c2 = ws.cell(row=row, column=2, value="")
+        # Tenant name from static data, or empty for manual input
+        tenant_name = tenant_lookup.get(ha.apartment_number, "")
+        c2 = ws.cell(row=row, column=2, value=tenant_name)
         c2.font = _FONT
         c2.alignment = _ALIGN_LEFT
         c2.border = _THIN_BORDER
@@ -173,6 +213,67 @@ def _write_inquilini_sheet(wb: openpyxl.Workbook, report: ParsedReport) -> None:
     ws.row_dimensions[1].height = 30
     for i in range(len(report.heat_allocators)):
         ws.row_dimensions[i + 2].height = 25
+
+
+# -- Mapping: cost label -> Tabella_2026 row (E column) --
+_COST_LABEL_TO_ROW: dict[str, int] = {
+    "Energia elettrica": 3,
+    "Gas metano": 4,
+    "Acqua condominio": 5,
+    "Conduzione e manutenzione": 6,
+    "Contabilizzazione": 7,
+    "Acqua sanitaria manutenzione": 8,
+}
+
+# -- Mapping: meter name -> Tabella_2026 row for F (initial) and G (final) columns --
+_METER_NAME_TO_ROW: dict[str, int] = {
+    "Energia elettrica CT": 20,
+    "Gas metano CT": 21,
+    "Acqua generale": 22,
+}
+
+
+def _inject_static_data(wb: openpyxl.Workbook, static_data: StaticData) -> None:
+    """Inject static condominium data into existing template sheets.
+
+    Populates:
+    - Tabelle millesimali: subalterno (B), heat energy (C), water energy (E)
+    - Tabella_2026: costs (E3-E8), meter readings (F20-G22)
+    - Ripartizione: previous readings in column B of heat/water/AFS rows
+    """
+    # -- Tabelle millesimali (rows 4-13 for apartments 1-10) --
+    ws_mill = wb["Tabelle millesimali"]
+    for m in static_data.millesimali:
+        row = 3 + m.apartment_number  # apt 1 -> row 4, apt 10 -> row 13
+        if 4 <= row <= 13:
+            ws_mill.cell(row=row, column=2, value=m.subalterno)
+            ws_mill.cell(row=row, column=3, value=m.heat_energy_kwh)
+            ws_mill.cell(row=row, column=5, value=m.water_energy_kwh)
+
+    # -- Tabella_2026: costs --
+    ws_tab = wb["Tabella_2026"]
+    for cost in static_data.costs:
+        tab_row = _COST_LABEL_TO_ROW.get(cost.label)
+        if tab_row is not None:
+            ws_tab.cell(row=tab_row, column=5, value=cost.amount)
+
+    # -- Tabella_2026: meter readings (case-insensitive name match) --
+    _meter_lookup = {k.upper(): v for k, v in _METER_NAME_TO_ROW.items()}
+    for meter in static_data.meters:
+        meter_row = _meter_lookup.get(meter.name.upper())
+        if meter_row is not None:
+            ws_tab.cell(row=meter_row, column=6, value=meter.initial)
+            ws_tab.cell(row=meter_row, column=7, value=meter.final)
+
+    # -- Ripartizione: previous readings (column B of heat/water/AFS rows) --
+    ws_rip = wb.worksheets[0]
+    for prev in static_data.previous_readings:
+        rows = APT_ROWS.get(prev.apartment_number)
+        if rows is None:
+            continue
+        ws_rip.cell(row=rows["heat"], column=2, value=prev.heat_kwh)
+        ws_rip.cell(row=rows["water"], column=2, value=prev.water_m3)
+        ws_rip.cell(row=rows["afs"], column=2, value=prev.cold_water_m3)
 
 
 # Columns visible in the original "File con dati necessari" (0-indexed)
