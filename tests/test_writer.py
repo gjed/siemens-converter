@@ -8,11 +8,17 @@ from pathlib import Path
 
 from siemens_converter.writer import write_xlsx
 from siemens_converter.models import (
-    ReportHeader,
+    ApartmentInfo,
     CentralMeter,
-    WaterMeter,
+    CostItem,
     HeatAllocator,
+    MeterReading,
+    Millesimali,
     ParsedReport,
+    PreviousReading,
+    ReportHeader,
+    StaticData,
+    WaterMeter,
 )
 
 
@@ -323,3 +329,131 @@ def test_full_pipeline(tmp_path):
     # Dates should be set
     assert ws["D28"].value is not None
     assert ws["C76"].value is not None
+
+
+# -- Static data integration tests --
+
+
+def _make_static_data():
+    """Build a StaticData matching the 2-apartment test report."""
+    return StaticData(
+        apartments=[
+            ApartmentInfo(1, "Rossi Mario", "Bianchi Anna"),
+            ApartmentInfo(2, "Verdi Giuseppe", "Neri Luigi"),
+        ],
+        millesimali=[
+            Millesimali(1, 20, 1344.03, 1101.36),
+            Millesimali(2, 21, 2595.68, 1297.82),
+        ],
+        costs=[
+            CostItem("Energia elettrica", 263.44),
+            CostItem("Gas metano", 2141.0),
+            CostItem("Acqua condominio", 0.0),
+            CostItem("Conduzione e manutenzione", 280.0),
+            CostItem("Contabilizzazione", 68.2),
+            CostItem("Acqua sanitaria manutenzione", 0.0),
+        ],
+        meters=[
+            MeterReading("Energia elettrica CT", "kWh", 0, 1086),
+            MeterReading("Gas metano CT", "mc", 0, 1718),
+            MeterReading("Acqua generale", "mc", 0, 680),
+        ],
+        previous_readings=[
+            PreviousReading(1, 4048, 25.5, 10.2),
+            PreviousReading(2, 4727, 30.1, 12.5),
+        ],
+    )
+
+
+def test_static_data_tenant_names(tmp_path):
+    """Inquilini column B should have tenant names when static data provided."""
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out, static_data=_make_static_data())
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Inquilini"]
+    assert ws["B2"].value == "Bianchi Anna"
+    assert ws["B3"].value == "Neri Luigi"
+
+
+def test_static_data_millesimali(tmp_path):
+    """Tabelle millesimali should have energy values and subalterno."""
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out, static_data=_make_static_data())
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Tabelle millesimali"]
+    # Apartment 1 -> row 4
+    assert ws.cell(row=4, column=2).value == 20  # subalterno
+    assert ws.cell(row=4, column=3).value == 1344.03  # heat energy kWh
+    assert ws.cell(row=4, column=5).value == 1101.36  # water energy kWh
+    # Apartment 2 -> row 5
+    assert ws.cell(row=5, column=2).value == 21
+    assert ws.cell(row=5, column=3).value == 2595.68
+
+
+def test_static_data_costs(tmp_path):
+    """Tabella_2026 should have cost amounts in E3-E8."""
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out, static_data=_make_static_data())
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Tabella_2026"]
+    assert ws.cell(row=3, column=5).value == 263.44  # Energia elettrica
+    assert ws.cell(row=4, column=5).value == 2141.0  # Gas metano
+    assert ws.cell(row=5, column=5).value == 0.0  # Acqua
+    assert ws.cell(row=6, column=5).value == 280.0  # Conduzione
+    assert ws.cell(row=7, column=5).value == 68.2  # Contabilizzazione
+    assert ws.cell(row=8, column=5).value == 0.0  # Acqua sanitaria
+
+
+def test_static_data_meter_readings(tmp_path):
+    """Tabella_2026 should have meter readings in F20-G22."""
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out, static_data=_make_static_data())
+    wb = openpyxl.load_workbook(out)
+    ws = wb["Tabella_2026"]
+    assert ws.cell(row=20, column=6).value == 0  # elettrica initial
+    assert ws.cell(row=20, column=7).value == 1086  # elettrica final
+    assert ws.cell(row=21, column=6).value == 0  # gas initial
+    assert ws.cell(row=21, column=7).value == 1718  # gas final
+    assert ws.cell(row=22, column=6).value == 0  # acqua initial
+    assert ws.cell(row=22, column=7).value == 680  # acqua final
+
+
+def test_static_data_previous_readings(tmp_path):
+    """Ripartizione previous readings in column B."""
+    out = tmp_path / "output.xlsx"
+    write_xlsx(_make_report(), out, static_data=_make_static_data())
+    wb = openpyxl.load_workbook(out)
+    ws = wb.worksheets[0]
+    # Apt 1: heat row 78, water row 130, AFS row 182
+    assert ws.cell(row=78, column=2).value == 4048  # heat prev
+    assert ws.cell(row=130, column=2).value == 25.5  # water prev
+    assert ws.cell(row=182, column=2).value == 10.2  # AFS prev
+    # Apt 2: heat row 80, water row 132, AFS row 184
+    assert ws.cell(row=80, column=2).value == 4727
+    assert ws.cell(row=132, column=2).value == 30.1
+    assert ws.cell(row=184, column=2).value == 12.5
+
+
+def test_without_static_data_unchanged(tmp_path):
+    """Without static data, output is identical to current behavior."""
+    out_no_static = tmp_path / "no_static.xlsx"
+    out_with_none = tmp_path / "with_none.xlsx"
+    report = _make_report()
+
+    write_xlsx(report, out_no_static)
+    write_xlsx(report, out_with_none, static_data=None)
+
+    wb1 = openpyxl.load_workbook(out_no_static)
+    wb2 = openpyxl.load_workbook(out_with_none)
+
+    # Same sheets
+    assert wb1.sheetnames == wb2.sheetnames
+
+    # Inquilini tenant column still empty
+    ws = wb1["Inquilini"]
+    assert ws["B2"].value is None
+
+    # Tabelle millesimali energy values still empty
+    ws = wb1["Tabelle millesimali"]
+    assert ws.cell(row=4, column=2).value is None  # subalterno
+    assert ws.cell(row=4, column=3).value is None  # heat energy
