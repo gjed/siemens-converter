@@ -54,6 +54,7 @@ jobs:
           fi
           OPTS="--onefile --paths src --name siemens-converter"
           OPTS="$OPTS --add-data src/siemens_converter/template.xlsx${SEP}siemens_converter"
+          OPTS="$OPTS --add-data src/siemens_converter/static_data_template.xlsx${SEP}siemens_converter"
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             OPTS="$OPTS --noconsole"
           fi
