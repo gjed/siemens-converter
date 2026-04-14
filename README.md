@@ -30,7 +30,7 @@ python -m siemens_converter path/to/FC_report.xls [path/to/static_data.xlsx]
 
 The optional second argument is a static data file with tenant names, millesimali, costs, meter readings, and previous-period readings. See the included `static_data_template.xlsx` for the expected format.
 
-> Il secondo argomento opzionale e un file di dati statici con nomi inquilini, millesimali, costi, letture contatori e letture precedenti. Vedere il template `static_data_template.xlsx` incluso per il formato atteso.
+> Il secondo argomento opzionale è un file di dati statici con nomi inquilini, millesimali, costi, letture contatori e letture precedenti. Vedere il template `static_data_template.xlsx` incluso per il formato atteso.
 
 ## Windows (.exe)
 
