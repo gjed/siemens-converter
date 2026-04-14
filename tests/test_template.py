@@ -7,6 +7,11 @@ def _load_template():
     return openpyxl.load_workbook(template_path)
 
 
+def _load_static_template():
+    template_path = files("siemens_converter").joinpath("static_data_template.xlsx")
+    return openpyxl.load_workbook(template_path)
+
+
 def test_template_has_three_sheets():
     wb = _load_template()
     assert len(wb.sheetnames) == 3
@@ -99,3 +104,125 @@ def test_template_tabella_2026_eur_cleared():
     # Date should be stub
     assert ws["E18"].value is None
     assert ws["F18"].value is None
+
+
+# -- Static data template tests --
+
+
+def test_static_template_has_five_sheets():
+    wb = _load_static_template()
+    assert wb.sheetnames == [
+        "Inquilini",
+        "Millesimali",
+        "Costi",
+        "Contatori",
+        "Letture_precedenti",
+    ]
+
+
+def test_static_template_inquilini_has_title_and_headers():
+    wb = _load_static_template()
+    ws = wb["Inquilini"]
+    # Row 1: section title
+    assert ws.cell(row=1, column=1).value is not None
+    # Row 2: column headers
+    headers = [ws.cell(row=2, column=c).value for c in range(1, 4)]
+    assert any("App" in str(h) for h in headers if h)
+    assert any("Proprietario" in str(h) or "Condomino" in str(h) for h in headers if h)
+    assert any("Inquilino" in str(h) or "Conduttore" in str(h) for h in headers if h)
+
+
+def test_static_template_inquilini_has_ten_data_rows():
+    wb = _load_static_template()
+    ws = wb["Inquilini"]
+    # Data rows start at row 3 (title + header above)
+    apt_nums = [ws.cell(row=r, column=1).value for r in range(3, 13)]
+    assert apt_nums == list(range(1, 11))
+
+
+def test_static_template_millesimali_has_title_and_headers():
+    wb = _load_static_template()
+    ws = wb["Millesimali"]
+    assert ws.cell(row=1, column=1).value is not None  # title
+    # Row 2 has column headers
+    headers = [ws.cell(row=2, column=c).value for c in range(1, 7)]
+    assert any(h for h in headers if h)
+
+
+def test_static_template_millesimali_has_totale_and_data():
+    wb = _load_static_template()
+    ws = wb["Millesimali"]
+    # Row 4 = TOTALE, rows 5-14 = apartments 1-10
+    totale = ws.cell(row=4, column=1).value
+    assert totale is not None
+    apt_nums = [ws.cell(row=r, column=1).value for r in range(5, 15)]
+    assert apt_nums == list(range(1, 11))
+
+
+def test_static_template_millesimali_has_computed_columns():
+    wb = _load_static_template()
+    ws = wb["Millesimali"]
+    # Column 4 (Mill risc.) and 6 (Mill ACS) have formulas
+    d5 = ws.cell(row=5, column=4).value
+    f5 = ws.cell(row=5, column=6).value
+    assert d5 is not None and "=" in str(d5)
+    assert f5 is not None and "=" in str(f5)
+
+
+def test_static_template_costi_has_required_labels():
+    wb = _load_static_template()
+    ws = wb["Costi"]
+    # Labels are in the data section (after title + header), check all cells col 1
+    all_labels = [ws.cell(row=r, column=1).value for r in range(1, ws.max_row + 1)]
+    assert "Energia elettrica" in all_labels
+    assert "Gas metano" in all_labels
+    assert "Acqua condominio" in all_labels
+    assert "Conduzione e manutenzione" in all_labels
+    assert "Contabilizzazione" in all_labels
+    assert "Acqua sanitaria manutenzione" in all_labels
+
+
+def test_static_template_costi_has_totale_formula():
+    wb = _load_static_template()
+    ws = wb["Costi"]
+    # There should be a TOTALE row with a SUM formula
+    total_row = None
+    for r in range(1, ws.max_row + 1):
+        v = ws.cell(row=r, column=1).value
+        if v and "TOTALE" in str(v).upper():
+            total_row = r
+            break
+    assert total_row is not None
+    total_formula = ws.cell(row=total_row, column=2).value
+    assert total_formula is not None and "SUM" in str(total_formula)
+
+
+def test_static_template_contatori_has_required_meters():
+    wb = _load_static_template()
+    ws = wb["Contatori"]
+    # Meter names are in column 1; check case-insensitively
+    all_vals = [ws.cell(row=r, column=1).value for r in range(1, ws.max_row + 1)]
+    all_upper = [str(v).upper() for v in all_vals if v]
+    assert "ENERGIA ELETTRICA CT" in all_upper
+    assert "GAS METANO CT" in all_upper
+    assert "ACQUA GENERALE" in all_upper
+
+
+def test_static_template_contatori_has_consumo_formula():
+    wb = _load_static_template()
+    ws = wb["Contatori"]
+    # Column 5 should have consumption formulas
+    formulas = [ws.cell(row=r, column=5).value for r in range(3, 6)]
+    assert any(v and "=" in str(v) for v in formulas)
+
+
+def test_static_template_letture_precedenti_has_ten_data_rows():
+    wb = _load_static_template()
+    ws = wb["Letture_precedenti"]
+    # Find data rows (integer apartment numbers)
+    apt_nums = []
+    for r in range(1, ws.max_row + 1):
+        v = ws.cell(row=r, column=1).value
+        if isinstance(v, int):
+            apt_nums.append(v)
+    assert apt_nums == list(range(1, 11))
