@@ -1,9 +1,15 @@
 from siemens_converter.models import (
-    ReportHeader,
+    ApartmentInfo,
     CentralMeter,
-    WaterMeter,
+    CostItem,
     HeatAllocator,
+    MeterReading,
+    Millesimali,
     ParsedReport,
+    PreviousReading,
+    ReportHeader,
+    StaticData,
+    WaterMeter,
     extract_apartment_number,
 )
 
@@ -78,3 +84,60 @@ def test_extract_apartment_number_no_space_dash():
 
 def test_extract_apartment_number_double_space():
     assert extract_apartment_number("App, 01 Rossi Mario  - Gialli") == 1
+
+
+# -- Static data models --
+
+
+def test_apartment_info():
+    a = ApartmentInfo(apartment_number=1, proprietario="Rossi", inquilino="Bianchi")
+    assert a.apartment_number == 1
+    assert a.proprietario == "Rossi"
+    assert a.inquilino == "Bianchi"
+
+
+def test_millesimali():
+    m = Millesimali(
+        apartment_number=1,
+        subalterno=20,
+        heat_energy_kwh=1344.03,
+        water_energy_kwh=1101.36,
+    )
+    assert m.subalterno == 20
+    assert m.heat_energy_kwh == 1344.03
+
+
+def test_cost_item():
+    c = CostItem(label="Gas metano", amount=2141.0)
+    assert c.label == "Gas metano"
+    assert c.amount == 2141.0
+
+
+def test_meter_reading():
+    m = MeterReading(name="Energia elettrica CT", unit="kWh", initial=0.0, final=1086.0)
+    assert m.final - m.initial == 1086.0
+
+
+def test_previous_reading():
+    p = PreviousReading(
+        apartment_number=1, heat_kwh=4048, water_m3=25.5, cold_water_m3=10.2
+    )
+    assert p.heat_kwh == 4048
+
+
+def test_static_data_defaults():
+    sd = StaticData()
+    assert sd.apartments == []
+    assert sd.millesimali == []
+    assert sd.costs == []
+    assert sd.meters == []
+    assert sd.previous_readings == []
+
+
+def test_static_data_with_values():
+    sd = StaticData(
+        apartments=[ApartmentInfo(1, "Rossi", "Bianchi")],
+        costs=[CostItem("Gas", 100.0)],
+    )
+    assert len(sd.apartments) == 1
+    assert len(sd.costs) == 1
