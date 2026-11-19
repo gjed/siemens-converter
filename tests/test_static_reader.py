@@ -113,3 +113,27 @@ def test_fewer_apartment_rows(tmp_path: Path):
     assert len(sd.apartments) == 3
     assert sd.apartments[0].apartment_number == 1
     assert sd.apartments[2].apartment_number == 3
+
+
+def test_cost_label_case_and_whitespace_insensitive(tmp_path: Path):
+    """'gas METANO ' must still map to Gas metano, not silently become 0."""
+    wb = openpyxl.load_workbook(FIXTURE)
+    ws = wb["Costi"]
+    ws["A4"] = "gas METANO "  # row 4 = Gas metano
+    patched = tmp_path / "case_cost.xlsx"
+    wb.save(patched)
+
+    sd = parse_static_data(patched)
+    cost_dict = {c.label: c.amount for c in sd.costs}
+    assert cost_dict["Gas metano"] == 2141.0
+
+
+def test_unknown_cost_label_raises(tmp_path: Path):
+    wb = openpyxl.load_workbook(FIXTURE)
+    ws = wb["Costi"]
+    ws["A4"] = "Gas metanno"
+    patched = tmp_path / "unknown_cost.xlsx"
+    wb.save(patched)
+
+    with pytest.raises(ValueError, match="gas metanno"):
+        parse_static_data(patched)

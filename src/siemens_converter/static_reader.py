@@ -116,7 +116,11 @@ def _read_millesimali(ws: openpyxl.worksheet.worksheet.Worksheet) -> list[Milles
 
 
 def _read_costi(ws: openpyxl.worksheet.worksheet.Worksheet) -> list[CostItem]:
-    """Read Costi sheet: Voce, Importo.  Missing expected labels default to 0.0."""
+    """Read Costi sheet: Voce, Importo.
+
+    Labels match case-insensitively, ignoring surrounding whitespace. Missing
+    expected labels default to 0.0; unknown labels raise ValueError.
+    """
     found: dict[str, float] = {}
     for row in ws.iter_rows(min_row=_DATA_START_ROW, values_only=True):
         label = row[0] if len(row) > 0 else None
@@ -127,11 +131,15 @@ def _read_costi(ws: openpyxl.worksheet.worksheet.Worksheet) -> list[CostItem]:
             continue
         amount_raw = row[1] if len(row) > 1 else None
         amount = float(amount_raw) if amount_raw is not None else 0.0
-        found[str(label)] = amount
+        found[str(label).strip().casefold()] = amount
+
+    unknown = set(found) - {lbl.casefold() for lbl in COST_LABELS}
+    if unknown:
+        raise ValueError(f"Unknown cost label(s) in Costi: {', '.join(sorted(unknown))}")
 
     result: list[CostItem] = []
     for label in COST_LABELS:
-        result.append(CostItem(label=label, amount=found.get(label, 0.0)))
+        result.append(CostItem(label=label, amount=found.get(label.casefold(), 0.0)))
     return result
 
 
