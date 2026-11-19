@@ -108,3 +108,25 @@ def test_usage_message_mentions_static(monkeypatch, capsys):
 
     captured = capsys.readouterr()
     assert "static_data.xlsx" in captured.out
+
+
+def test_main_two_files_reversed_order(monkeypatch, tmp_path):
+    """Drag-and-drop may pass the .xlsx first; files are routed by suffix."""
+    input_file = tmp_path / FC_REPORT.name
+    shutil.copy(FC_REPORT, input_file)
+    static_file = tmp_path / STATIC_DATA.name
+    shutil.copy(STATIC_DATA, static_file)
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["siemens-converter", str(static_file), str(input_file)],
+    )
+    from siemens_converter.__main__ import main
+
+    main()
+
+    outputs = list(tmp_path.glob("Riparto_*.xlsx"))
+    assert len(outputs) == 1
+    wb = openpyxl.load_workbook(outputs[0])
+    assert wb["Inquilini"]["B2"].value == "Bianchi Anna"
