@@ -1,6 +1,6 @@
 # siemens-converter
 
-[![CI](https://github.com/gjed/siemens-converter/actions/workflows/ci.yml/badge.svg)](https://github.com/gjed/siemens-converter/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/gjed/siemens-converter/branch/main/graph/badge.svg)](https://codecov.io/gh/gjed/siemens-converter) [![GitHub Release](https://img.shields.io/github/v/release/gjed/siemens-converter)](https://github.com/gjed/siemens-converter/releases/latest) [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://github.com/gjed/siemens-converter) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+[![CI](https://github.com/gjed/siemens-converter/actions/workflows/ci.yml/badge.svg)](https://github.com/gjed/siemens-converter/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/gjed/siemens-converter/branch/main/graph/badge.svg)](https://codecov.io/gh/gjed/siemens-converter) [![GitHub Release](https://img.shields.io/github/v/release/gjed/siemens-converter)](https://github.com/gjed/siemens-converter/releases/latest) [![Python](https://img.shields.io/badge/python-3.15-blue)](https://github.com/gjed/siemens-converter) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
 [Siemens](https://www.siemens.com/) manufactures **thermal energy meters (heat cost allocators)** used in condominiums to measure individual apartment heating consumption and fairly split shared heating expenses.
 
