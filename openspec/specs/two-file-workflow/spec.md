@@ -16,12 +16,12 @@ The CLI entry point SHALL accept two positional arguments: the FC_report `.xls` 
 - **WHEN** the user provides a static data path that does not exist
 - **THEN** the system SHALL display an error message and exit with code 1
 
-### Requirement: Windows dialog with two input fields
+### Requirement: Windows dialog with two sequential file selections
 
-When running in no-console mode (PyInstaller `--noconsole`), the system SHALL display a Windows file dialog with two input fields:
+When running in no-console mode (PyInstaller `--noconsole`), the system SHALL show two sequential Windows file-open dialogs:
 
-1. First field: FC_report `.xls` file selection
-2. Second field: static data `.xlsx` file selection (optional — user can cancel to skip)
+1. First dialog: FC_report `.xls` file selection (required — cancelling exits the application)
+2. Second dialog: static data `.xlsx` file selection (optional — cancelling skips static data and proceeds with FC_report only)
 
 #### Scenario: User selects both files via dialog
 - **WHEN** the user is running the `.exe` without console and selects both files
