@@ -74,19 +74,6 @@ def _get_template_path() -> Path:
     return Path(str(files("siemens_converter").joinpath("template.xlsx")))
 
 
-def get_static_template_path() -> Path:
-    """Locate static_data_template.xlsx — for users to copy and populate.
-
-    Works both installed and in PyInstaller bundles.
-    """
-    meipass = getattr(sys, "_MEIPASS", None)
-    if meipass:
-        p = Path(meipass) / "siemens_converter" / "static_data_template.xlsx"
-        if p.exists():
-            return p
-    return Path(str(files("siemens_converter").joinpath("static_data_template.xlsx")))
-
-
 def write_xlsx(
     report: ParsedReport,
     output_path: Path,
