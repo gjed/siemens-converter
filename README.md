@@ -28,9 +28,9 @@ pip install -e .
 python -m siemens_converter path/to/FC_report.xls [path/to/static_data.xlsx]
 ```
 
-The optional second argument is a static data file with tenant names, millesimali, costs, meter readings, and previous-period readings. See the included `static_data_template.xlsx` for the expected format.
+The optional second argument is a static data file with tenant names, millesimali, costs, meter readings, and previous-period readings. Download `static_data_template.xlsx` from the [latest release](https://github.com/gjed/siemens-converter/releases/latest) for the expected format.
 
-> Il secondo argomento opzionale è un file di dati statici con nomi inquilini, millesimali, costi, letture contatori e letture precedenti. Vedere il template `static_data_template.xlsx` incluso per il formato atteso.
+> Il secondo argomento opzionale è un file di dati statici con nomi inquilini, millesimali, costi, letture contatori e letture precedenti. Scaricare il template `static_data_template.xlsx` dall'[ultima release](https://github.com/gjed/siemens-converter/releases/latest) per il formato atteso.
 
 ## Windows (.exe)
 
@@ -42,7 +42,6 @@ Build a standalone executable for non-technical users:
 pip install -e ".[dev]"
 pyinstaller --onefile --paths src --name siemens-converter \
   --add-data "src/siemens_converter/template.xlsx:siemens_converter" \
-  --add-data "src/siemens_converter/static_data_template.xlsx:siemens_converter" \
   scripts/pyinstaller_entry.py
 ```
 
