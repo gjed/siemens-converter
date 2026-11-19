@@ -18,7 +18,7 @@ The template SHALL be committed to the repository and bundled in PyInstaller bui
 
 #### Scenario: Template has correct sheet structure
 - **WHEN** the template file is opened
-- **THEN** it SHALL contain exactly the five sheets listed above with correct column headers in row 1
+- **THEN** it SHALL contain exactly the five sheets listed above, with a section title in row 1, column headers in row 2, and data rows starting at row 3
 
 ### Requirement: Static data reader
 
