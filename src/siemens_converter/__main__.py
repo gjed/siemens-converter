@@ -69,7 +69,8 @@ def _win_open_file_dialog(title: str, filetypes: str) -> str | None:
         if ctypes.windll.comdlg32.GetOpenFileNameW(ctypes.byref(ofn)):  # type: ignore[union-attr]
             return buf.value or None
         return None
-    except Exception:
+    except Exception as exc:
+        _msgbox("Errore", f"Impossibile aprire la finestra di selezione file: {exc}")
         return None
 
 
