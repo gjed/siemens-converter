@@ -79,10 +79,13 @@ def main() -> None:
     static_path: Path | None = None
 
     if len(sys.argv) >= 2:
-        # CLI / drag-and-drop mode: first arg is FC_report
-        fc_path = Path(sys.argv[1])
-        if len(sys.argv) >= 3:
-            static_path = Path(sys.argv[2])
+        # CLI / drag-and-drop mode
+        args = [Path(a) for a in sys.argv[1:3]]
+        # Explorer does not preserve drag order: route the .xlsx to static data
+        args.sort(key=lambda p: p.suffix.lower() == ".xlsx")
+        fc_path = args[0]
+        if len(args) > 1:
+            static_path = args[1]
     elif not _has_console():
         # No-console (PyInstaller --noconsole): use Windows file dialogs
         fc_str = _win_open_file_dialog(
