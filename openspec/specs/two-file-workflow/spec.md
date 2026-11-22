@@ -1,4 +1,10 @@
-## ADDED Requirements
+# two-file-workflow Specification
+
+## Purpose
+
+Define how the converter receives its two inputs, the required FC_report `.xls` and the optional static data `.xlsx`, in each of the ways it is started: from the command line, by dragging files onto the Windows executable, and through file dialogs when the executable is opened without files.
+
+## Requirements
 
 ### Requirement: CLI accepts two input files
 
@@ -12,7 +18,7 @@ The CLI entry point SHALL accept two positional arguments: the FC_report `.xls` 
 #### Scenario: Only FC_report provided (backward compatible)
 
 - **WHEN** the user runs `python -m siemens_converter <FC_report.xls>` without a second argument
-- **THEN** the system SHALL produce output without static data, identical to current behavior
+- **THEN** the system SHALL produce the output from the FC_report alone, with no static data merged
 
 #### Scenario: Static data file not found
 
@@ -21,7 +27,7 @@ The CLI entry point SHALL accept two positional arguments: the FC_report `.xls` 
 
 ### Requirement: Windows dialog with two sequential file selections
 
-When running in no-console mode (PyInstaller `--noconsole`), the system SHALL show two sequential Windows file-open dialogs:
+When running in no-console mode (PyInstaller `--noconsole`) and started without file arguments, the system SHALL show two sequential Windows file-open dialogs:
 
 1. First dialog: FC_report `.xls` file selection (required — cancelling exits the application)
 1. Second dialog: static data `.xlsx` file selection (optional — cancelling skips static data and proceeds with FC_report only)
