@@ -9,6 +9,9 @@ coverage.xml
 .venv/
 .ruff_cache/
 
+# Local OpenCode tooling state
+.opencode/package-lock.json
+
 # Real report data (confidential)
 assets/
 FC_report_EV*.xls
