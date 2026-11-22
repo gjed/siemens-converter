@@ -52,6 +52,27 @@ def test_template_formulas_preserved():
     assert d78 is not None and "=" in str(d78)
 
 
+def test_template_electricity_consumption_is_meter_difference():
+    wb = _load_template()
+    ws = wb.worksheets[0]
+    # Consumption (final - initial), not the final reading in G20
+    assert ws["C25"].value == "=Tabella_2026!H20"
+
+
+def test_template_gas_final_reading_references_final_reading():
+    wb = _load_template()
+    ws = wb.worksheets[0]
+    # Final reading, not the consumption in H21
+    assert ws["C23"].value == "=Tabella_2026!G21"
+
+
+def test_template_fixed_cost_shares_reference_millesimali():
+    wb = _load_template()
+    ws = wb.worksheets[0]
+    assert ws["C63"].value == "='Tabelle millesimali'!C18"  # kcli
+    assert ws["C64"].value == "='Tabelle millesimali'!E18"  # kacs
+
+
 def test_template_tabelle_millesimali_structure():
     wb = _load_template()
     ws = wb["Tabelle millesimali"]
