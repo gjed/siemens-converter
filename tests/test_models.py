@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from siemens_converter.models import (
     ApartmentInfo,
     CentralMeter,
@@ -11,6 +13,8 @@ from siemens_converter.models import (
     StaticData,
     WaterMeter,
     extract_apartment_number,
+    latest_readout_date,
+    parse_readout_date,
 )
 
 
@@ -68,6 +72,37 @@ def test_parsed_report():
         header=header, central_meters=[], water_meters=[], heat_allocators=[]
     )
     assert report.header.serial == "EV1"
+    assert report.warnings == []
+
+
+def test_communication_status_defaults_to_ok():
+    assert (
+        CentralMeter("Riscaldamento", 1, 2, "2026/03/02").communication_status == "Ok"
+    )
+
+
+def test_parse_readout_date():
+    assert parse_readout_date("2026/03/02") == datetime(2026, 3, 2)
+    assert parse_readout_date(" 2026/03/02 ") == datetime(2026, 3, 2)
+
+
+def test_parse_readout_date_blank_or_malformed():
+    assert parse_readout_date("") is None
+    assert parse_readout_date("02/03/2026") is None
+
+
+def test_latest_readout_date():
+    meters = [
+        CentralMeter("a", 1, 2, "2026/03/02"),
+        CentralMeter("b", 1, 2, ""),
+        CentralMeter("c", 1, 2, "2026/03/14"),
+    ]
+    assert latest_readout_date(meters) == datetime(2026, 3, 14)
+
+
+def test_latest_readout_date_without_dates():
+    assert latest_readout_date([]) is None
+    assert latest_readout_date([CentralMeter("a", 1, 2, "")]) is None
 
 
 def test_extract_apartment_number_normal():

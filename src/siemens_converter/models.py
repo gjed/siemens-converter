@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
+from datetime import datetime
 
 
 @dataclass
@@ -23,6 +25,7 @@ class CentralMeter:
     heat_energy_kwh: int
     serial_number: int
     readout_date: str
+    communication_status: str = "Ok"
 
 
 @dataclass
@@ -32,6 +35,7 @@ class WaterMeter:
     water_volume_m3: float
     serial_number: int
     readout_date: str
+    communication_status: str = "Ok"
 
 
 @dataclass
@@ -42,6 +46,7 @@ class HeatAllocator:
     aux1_volume_m3: float
     serial_number: int
     readout_date: str
+    communication_status: str = "Ok"
 
     @property
     def heat_energy_kwh(self) -> int:
@@ -56,6 +61,7 @@ class ParsedReport:
     heat_allocators: list[HeatAllocator]
     column_headers: list[str] | None = None
     raw_device_rows: list[list[str]] | None = None
+    warnings: list[str] = field(default_factory=list)
 
 
 # -- Static condominium data (non-Siemens, from administrator's records) --
@@ -105,6 +111,22 @@ class StaticData:
     costs: list[CostItem] = field(default_factory=list)
     meters: list[MeterReading] = field(default_factory=list)
     previous_readings: list[PreviousReading] = field(default_factory=list)
+
+
+def parse_readout_date(text: str) -> datetime | None:
+    """Parse a 'YYYY/MM/DD' readout date; None when blank or malformed."""
+    try:
+        return datetime.strptime(text.strip(), "%Y/%m/%d")
+    except ValueError:
+        return None
+
+
+def latest_readout_date(
+    meters: Iterable[CentralMeter | WaterMeter | HeatAllocator],
+) -> datetime | None:
+    """Most recent readout date among *meters*; None when none of them has one."""
+    dates = [d for m in meters if (d := parse_readout_date(m.readout_date))]
+    return max(dates, default=None)
 
 
 def extract_apartment_number(description: str) -> int:
