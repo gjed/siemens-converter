@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import openpyxl
 import pytest
+from datetime import datetime
 from pathlib import Path
 
 from siemens_converter.writer import write_xlsx
@@ -71,11 +72,52 @@ def test_central_meter_sanitario(tmp_path):
 
 
 def test_reading_date(tmp_path):
+    """Each date cell carries the readout date of its own meters."""
+    report = _make_report()
+    report.central_meters[0].readout_date = "2026/03/02"  # Riscaldamento
+    report.central_meters[1].readout_date = "2026/03/01"  # Sanitario
+    for ha in report.heat_allocators:
+        ha.readout_date = "2026/03/14"
+    for wm in report.water_meters:
+        wm.readout_date = "2026/03/13"
+
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
-    wb = openpyxl.load_workbook(out)
-    ws = wb.worksheets[0]
-    assert ws["D28"].value is not None
+    write_xlsx(report, out)
+    ws = openpyxl.load_workbook(out).worksheets[0]
+
+    assert ws["D28"].value == datetime(2026, 3, 2)
+    assert ws["D31"].value == datetime(2026, 3, 1)
+    assert ws["C76"].value == datetime(2026, 3, 14)
+    assert ws["C126"].value == datetime(2026, 3, 13)
+    assert ws["C178"].value == datetime(2026, 3, 14)
+
+
+def test_reading_date_same_kind_different_days(tmp_path):
+    """A section whose meters were read on different days takes the latest date."""
+    report = _make_report()
+    report.heat_allocators[0].readout_date = "2026/03/14"
+    report.heat_allocators[1].readout_date = "2026/03/10"
+
+    out = tmp_path / "output.xlsx"
+    write_xlsx(report, out)
+    ws = openpyxl.load_workbook(out).worksheets[0]
+
+    assert ws["C76"].value == datetime(2026, 3, 14)
+    assert ws["C178"].value == datetime(2026, 3, 14)
+    assert ws["C126"].value == datetime(2026, 3, 2)
+
+
+def test_reading_date_blank(tmp_path):
+    """A meter without a readable readout date leaves its date cell empty."""
+    report = _make_report()
+    report.central_meters[0].readout_date = ""
+
+    out = tmp_path / "output.xlsx"
+    write_xlsx(report, out)
+    ws = openpyxl.load_workbook(out).worksheets[0]
+
+    assert ws["D28"].value is None
+    assert ws["D31"].value == datetime(2026, 3, 2)
 
 
 def test_heat_allocator_values(tmp_path):
