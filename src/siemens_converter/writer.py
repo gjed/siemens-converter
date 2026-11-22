@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 import shutil
 import sys
-from datetime import datetime
 from importlib.resources import files
 from pathlib import Path
 
@@ -13,7 +12,12 @@ import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from siemens_converter.models import ParsedReport, StaticData
+from siemens_converter.models import (
+    ParsedReport,
+    StaticData,
+    latest_readout_date,
+    parse_readout_date,
+)
 
 # -- Styles matching the original "File con dati necessari" formatting --
 
@@ -90,21 +94,20 @@ def write_xlsx(
     wb = openpyxl.load_workbook(output_path)
     ws = wb.worksheets[0]  # Ripartizione sheet
 
-    reading_date = _parse_reading_date(report)
-
-    # Central meter readings
+    # Central meter readings, each dated from its own meter
     for meter in report.central_meters:
         if meter.description == "Riscaldamento":
             ws["C28"] = meter.heat_energy_kwh
-            ws["D28"] = reading_date
+            ws["D28"] = parse_readout_date(meter.readout_date)
         elif meter.description == "Sanitario":
             ws["C31"] = meter.heat_energy_kwh
-            ws["D31"] = reading_date
+            ws["D31"] = parse_readout_date(meter.readout_date)
 
-    # Section date headers
-    ws["C76"] = reading_date
-    ws["C126"] = reading_date
-    ws["C178"] = reading_date
+    # Section date headers: heat and cold water come from the heat meters
+    heat_date = latest_readout_date(report.heat_allocators)
+    ws["C76"] = heat_date
+    ws["C126"] = latest_readout_date(report.water_meters)
+    ws["C178"] = heat_date
 
     # Per-apartment heat allocator readings
     for ha in report.heat_allocators:
@@ -467,14 +470,3 @@ def _try_parse_number(val: str) -> str | int | float:
         return float(val.replace(",", "."))
     except ValueError:
         return val
-
-
-def _parse_reading_date(report: ParsedReport) -> datetime | None:
-    """Extract a datetime from the first available readout_date string."""
-    for meter in report.central_meters:
-        if meter.readout_date:
-            try:
-                return datetime.strptime(meter.readout_date, "%Y/%m/%d")
-            except ValueError:
-                pass
-    return None
