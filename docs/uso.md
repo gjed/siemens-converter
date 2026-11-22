@@ -77,14 +77,15 @@ Il programma scrive nel file questi dati:
 - dal file FC_report: le letture finali dei due contatori di calore della centrale termica, le letture finali di riscaldamento, acqua calda e acqua fredda di ogni appartamento, la data di lettura e i nomi degli appartamenti;
 - dal file dei dati statici: i nomi degli inquilini, i subalterni e l'energia utile, le spese dell'anno, le letture dei contatori principali e le letture precedenti di ogni appartamento.
 
-Tutti i calcoli sono formule di Excel già presenti nel file. Se correggi un dato a mano, i risultati si aggiornano.
+Quasi tutti i calcoli sono formule di Excel già presenti nel file: se correggi un dato a mano, i risultati si aggiornano. Fanno eccezione le celle elencate qui sotto.
 
 ### Dati da controllare a mano
 
 Il programma non aggiorna questi dati. Controllali ogni volta nel primo foglio:
 
 - le letture di inizio esercizio dei due contatori di calore della centrale termica, nelle celle `C27` e `C30`;
-- le date di inizio esercizio, nelle celle `D27`, `D30` e `B178`.
+- le date di inizio esercizio, nelle celle `D27`, `D30` e `B178`;
+- le quote delle spese fisse di riscaldamento e di acqua calda, nelle celle `C63` e `C64`. Sono numeri fissi, non formule. `C63` deve contenere lo stesso numero della cella `C18` del foglio `Tabelle millesimali`, e `C64` lo stesso numero della cella `E18` di quel foglio. Se sono diversi, scrivi in `C63` e `C64` i numeri che leggi in `C18` e `E18`.
 
 ### Se non usi il file dei dati statici
 
