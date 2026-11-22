@@ -139,7 +139,15 @@ def main() -> None:
     if _has_console():
         print(f"Parsing {fc_path.name} ...")
 
-    report = parse_fc_report(fc_path)
+    try:
+        report = parse_fc_report(fc_path)
+    except Exception as exc:
+        msg = f"Errore nel report FC: {exc}"
+        if _has_console():
+            print(msg)
+        else:
+            _msgbox("Errore", msg)
+        sys.exit(1)
 
     # Parse static data if provided
     static_data = None
@@ -167,12 +175,18 @@ def main() -> None:
 
     write_xlsx(report, output_path, static_data=static_data)
 
+    warnings = ""
+    if report.warnings:
+        warnings = "\n\nAttenzione:\n" + "\n".join(f"- {w}" for w in report.warnings)
+
     if _has_console():
+        if warnings:
+            print(warnings.lstrip("\n") + "\n")
         print(f"Done: {output_path}")
         if sys.platform == "win32":
             input("\nPress Enter to close...")
     else:
-        _msgbox("siemens-converter", f"Fatto!\n\n{output_path.name}")
+        _msgbox("siemens-converter", f"Fatto!\n\n{output_path.name}{warnings}")
 
 
 if __name__ == "__main__":
