@@ -19,6 +19,13 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
+      # tests/test_recalc.py recalculates the generated workbook with LibreOffice
+      # and fails, instead of skipping, when soffice is missing in CI.
+      - name: Install LibreOffice Calc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-calc
+
       - name: Run tests with coverage
         run: pytest --cov=siemens_converter --cov-report=xml --cov-report=term-missing
 
