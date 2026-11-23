@@ -88,49 +88,14 @@ def _fail(message: str) -> NoReturn:
     sys.exit(1)
 
 
-_FIND_REPORT = (
-    "il file FC_report esportato dal sistema Siemens (il file .xls, il cui nome "
-    "comincia con FC_report)"
-)
-
-
 def _route_files(paths: list[Path]) -> tuple[Path, Path]:
-    """Split the files given into (FC_report, static data).
+    """Split the files given into (FC_report, static data), or exit with a message."""
+    from siemens_converter.pipeline import ConversionError, route_files
 
-    Explorer does not preserve drag order, so the .xlsx is the static data and
-    the other file is the FC_report. Exits with a message when the files given
-    are not exactly one of each.
-    """
-    static = [p for p in paths if p.suffix.lower() == ".xlsx"]
-    reports = [p for p in paths if p.suffix.lower() != ".xlsx"]
-    if not reports and len(static) == 1:
-        _fail(
-            f"Manca il file FC_report: è stato scelto solo «{static[0].name}», che è "
-            "un file .xlsx e quindi viene usato come file dei dati statici. "
-            f"Scegliere anche {_FIND_REPORT} e ripetere la conversione."
-        )
-    if not reports:
-        _fail(
-            f"Sono stati scelti due file .xlsx, «{static[0].name}» e "
-            f"«{static[1].name}», ma ne serve uno solo: il file dei dati statici. "
-            f"Manca il file FC_report. Scegliere {_FIND_REPORT}, insieme a un solo "
-            "file dei dati statici, e ripetere la conversione."
-        )
-    if len(reports) > 1:
-        _fail(
-            f"Sono stati scelti due file che non sono .xlsx, «{reports[0].name}» e "
-            f"«{reports[1].name}», ma ne serve uno solo: il file FC_report. Il file "
-            "dei dati statici deve essere un file .xlsx. Scegliere il file "
-            "FC_report insieme al file dei dati statici e ripetere la conversione."
-        )
-    if not static:
-        from siemens_converter.static_reader import _TEMPLATE_ADVICE
-
-        _fail(
-            f"Manca il file dei dati statici: è stato scelto solo «{reports[0].name}», "
-            f"il file FC_report. {_TEMPLATE_ADVICE}"
-        )
-    return reports[0], static[0]
+    try:
+        return route_files(paths)
+    except ConversionError as exc:
+        _fail(str(exc))
 
 
 def main() -> None:
@@ -171,52 +136,21 @@ def main() -> None:
                 "spostato o rinominato e ripetere la conversione."
             )
 
-    from siemens_converter.parser import (
-        ReportError,
-        parse_fc_report,
-        warnings_with_manual_readings,
-    )
-    from siemens_converter.static_reader import StaticDataError, parse_static_data
-    from siemens_converter.writer import write_xlsx
+    from siemens_converter.pipeline import ConversionError, convert
 
-    if _has_console():
-        print(f"Lettura del report {fc_path.name} ...")
+    def progress(line: str) -> None:
+        if _has_console():
+            print(line)
 
     try:
-        report = parse_fc_report(fc_path)
-    except ReportError as exc:
-        _fail(f"Errore nel report FC: {exc}")
-
-    if _has_console():
-        print(f"Lettura dei dati statici da {static_path.name} ...")
-    try:
-        static_data = parse_static_data(static_path)
-    except StaticDataError as exc:
-        _fail(f"Errore nel file dati statici: {exc}")
-    report.warnings = warnings_with_manual_readings(report, static_data.central_meters)
-
-    date_safe = report.header.report_date.replace("/", "-")
-    out_name = f"Riparto_{report.header.serial}_{date_safe}.xlsx"
-    output_path = fc_path.parent / out_name
-
-    if _has_console():
-        print(f"Scrittura di {output_path.name} ...")
-
-    try:
-        write_xlsx(report, output_path, static_data)
-    except StaticDataError as exc:
+        result = convert(fc_path, static_path, fc_path.parent, progress)
+    except ConversionError as exc:
         _fail(str(exc))
-    except OSError:
-        _fail(
-            f"Impossibile creare il file «{output_path.name}» nella cartella "
-            f"{output_path.parent}. Se è aperto in Excel, chiuderlo; altrimenti "
-            "controllare di poter scrivere in quella cartella. Poi ripetere la "
-            "conversione."
-        )
+    output_path = result.output_path
 
     warnings = ""
-    if report.warnings:
-        warnings = "\n\nAttenzione:\n" + "\n".join(f"- {w}" for w in report.warnings)
+    if result.warnings:
+        warnings = "\n\nAttenzione:\n" + "\n".join(f"- {w}" for w in result.warnings)
 
     if _has_console():
         if warnings:
