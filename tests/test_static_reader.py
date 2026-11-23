@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import datetime
 from pathlib import Path
 
 import openpyxl
 import pytest
 
-from siemens_converter.static_reader import StaticDataError, parse_static_data
+from siemens_converter.models import CentralMeterStart, PreviousReading
+from siemens_converter.parser import parse_fc_report
+from siemens_converter.static_reader import (
+    StaticDataError,
+    check_against_report,
+    parse_static_data,
+)
 
 FIXTURE = Path(__file__).parent / "fixtures" / "static_data_TEST.xlsx"
 REPORT = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
@@ -562,3 +569,137 @@ def test_manual_final_reading_with_a_text_date(tmp_path: Path):
         "«dati_2026.xlsx», foglio «Esercizio», cella E5: il valore «10 gennaio» "
         "non è una data."
     )
+
+
+# -- Static data against the report --
+# The fixture report reads 28000 kWh (heating) and 25000 kWh (ACS) on the central
+# meters; apartment 1 reads 5243 kWh, 31.613 m³ of hot water and 45.72 m³ of cold water.
+
+
+def checked(static):
+    return check_against_report(parse_fc_report(REPORT), static)
+
+
+def with_previous(static, apartment: int, **changes):
+    return dataclasses.replace(
+        static,
+        previous_readings=[
+            dataclasses.replace(p, **changes) if p.apartment_number == apartment else p
+            for p in static.previous_readings
+        ],
+    )
+
+
+def test_static_data_of_the_same_exercise_is_accepted():
+    checked(parse_static_data(FIXTURE))
+
+
+def test_equal_readings_are_accepted():
+    static = with_previous(
+        parse_static_data(FIXTURE),
+        1,
+        heat_kwh=5243,
+        water_m3=31.613,
+        cold_water_m3=45.72,
+    )
+    static = dataclasses.replace(
+        static,
+        central_meters=[
+            CentralMeterStart("Riscaldamento", 28000),
+            CentralMeterStart("Sanitario", 25000),
+        ],
+    )
+
+    checked(static)
+
+
+def refusal_against_report(static) -> str:
+    with pytest.raises(StaticDataError) as excinfo:
+        checked(static)
+    return str(excinfo.value)
+
+
+ADVICE_AGAINST_REPORT = (
+    "Controllare di aver scelto i dati statici dello stesso esercizio del report "
+    "FC (le letture iniziali sono le letture finali dell'esercizio precedente) e "
+    "ripetere la conversione."
+)
+
+
+def test_central_meter_below_its_start_reading():
+    static = dataclasses.replace(
+        parse_static_data(FIXTURE),
+        central_meters=[
+            CentralMeterStart("Riscaldamento", 28001),
+            CentralMeterStart("Sanitario", 22000),
+        ],
+    )
+
+    assert refusal_against_report(static) == (
+        "Alcune letture finali sono più basse delle letture iniziali dei dati "
+        "statici, e non può essere:\n"
+        "- contatore centrale «Riscaldamento»: lettura finale 28000 kWh, lettura "
+        "iniziale 28001 kWh\n\n" + ADVICE_AGAINST_REPORT
+    )
+
+
+def test_manual_final_reading_is_the_one_compared():
+    low = dataclasses.replace(
+        parse_static_data(FIXTURE),
+        central_meters=[
+            CentralMeterStart("Riscaldamento", 24000, 23000, datetime(2026, 1, 9)),
+            CentralMeterStart("Sanitario", 22000),
+        ],
+    )
+    rescued = dataclasses.replace(
+        parse_static_data(FIXTURE),
+        # The report's 28000 would be below 29000, the manual 29500 is not
+        central_meters=[
+            CentralMeterStart("Riscaldamento", 29000, 29500, datetime(2026, 1, 9)),
+            CentralMeterStart("Sanitario", 22000),
+        ],
+    )
+
+    assert refusal_against_report(low).splitlines()[1] == (
+        "- contatore centrale «Riscaldamento»: lettura finale 23000 kWh (dai dati "
+        "statici), lettura iniziale 24000 kWh"
+    )
+    checked(rescued)
+
+
+def test_every_apartment_reading_that_went_backwards_is_named():
+    static = with_previous(
+        parse_static_data(FIXTURE),
+        1,
+        heat_kwh=5244,
+        water_m3=31.7,
+        cold_water_m3=45.72,
+    )
+    static = with_previous(static, 8, cold_water_m3=9.5)
+
+    assert refusal_against_report(static) == (
+        "Alcune letture finali sono più basse delle letture iniziali dei dati "
+        "statici, e non può essere:\n"
+        "- contacalorie «App, 01 Rossi Mario»: lettura finale 5243 kWh, lettura "
+        "iniziale 5244 kWh\n"
+        "- contatore dell'acqua calda «App, 01 Rossi Mario»: lettura finale "
+        "31,613 m³, lettura iniziale 31,7 m³\n"
+        "- contatore dell'acqua fredda «App, 08 Rosa Paolo»: lettura finale 8,27 "
+        "m³, lettura iniziale 9,5 m³\n\n" + ADVICE_AGAINST_REPORT
+    )
+
+
+def test_static_data_of_the_next_exercise_is_refused():
+    """Next year's start readings with this year's report: every consumption negative."""
+    static = parse_static_data(FIXTURE)
+    next_year = dataclasses.replace(
+        static,
+        previous_readings=[
+            PreviousReading(p.apartment_number, p.heat_kwh + 10000, 500.0, 500.0)
+            for p in static.previous_readings
+        ],
+    )
+
+    message = refusal_against_report(next_year)
+
+    assert message.count("\n- ") == 30

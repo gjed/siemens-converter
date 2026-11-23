@@ -18,6 +18,7 @@ from siemens_converter.models import (
     latest_readout_date,
     parse_readout_date,
 )
+from siemens_converter.static_reader import check_against_report
 
 # -- Styles matching the original "File con dati necessari" formatting --
 
@@ -96,7 +97,12 @@ def write_xlsx(
     readings, the start readings of the exercise and the central heat meters,
     and the previous-period readings. A manual final reading of a central heat
     meter in the static data replaces the one of the report.
+
+    Raises StaticDataError, before the output file is touched, when a final
+    reading of the report is lower than the matching start reading.
     """
+    check_against_report(report, static_data)
+
     template = _get_template_path()
     shutil.copy(str(template), str(output_path))
 

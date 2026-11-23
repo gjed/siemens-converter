@@ -283,6 +283,35 @@ def test_static_data_value_is_not_a_number(monkeypatch, capsys, tmp_path, consol
 
 
 @both_ways
+def test_static_data_of_another_exercise(monkeypatch, capsys, tmp_path, console):
+    report = copy(FC_REPORT, tmp_path)
+    wb = openpyxl.load_workbook(STATIC_DATA)
+    wb["Letture_precedenti"]["B3"] = 9999  # the report reads 5243 kWh for apartment 1
+    static = tmp_path / "dati_2026.xlsx"
+    wb.save(static)
+
+    assert refusal(
+        monkeypatch,
+        capsys,
+        report,
+        static,
+        console=console,
+        progress=READING
+        + "Lettura dei dati statici da dati_2026.xlsx ...\n"
+        + "Scrittura di Riparto_TE99999999_15-01-2026.xlsx ...\n",
+    ) == (
+        "Alcune letture finali sono più basse delle letture iniziali dei dati "
+        "statici, e non può essere:\n"
+        "- contacalorie «App, 01 Rossi Mario»: lettura finale 5243 kWh, lettura "
+        "iniziale 9999 kWh\n\n"
+        "Controllare di aver scelto i dati statici dello stesso esercizio del "
+        "report FC (le letture iniziali sono le letture finali dell'esercizio "
+        "precedente) e ripetere la conversione."
+    )
+    assert list(tmp_path.glob("Riparto_*.xlsx")) == []
+
+
+@both_ways
 def test_report_is_a_folder(monkeypatch, capsys, tmp_path, console):
     folder = tmp_path / "FC_report_cartella.xls"
     folder.mkdir()
