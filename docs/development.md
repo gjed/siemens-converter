@@ -13,7 +13,7 @@
 
 ## Setup
 
-Python 3.14 or 3.15 is required.
+Python 3.14 or 3.15 is required. CI tests on both; the release binaries are built on 3.15.
 
 ```bash
 pip install -e ".[dev]"
@@ -25,6 +25,27 @@ pip install -e ".[dev]"
 pytest
 pytest --cov=siemens_converter --cov-report=term-missing
 ```
+
+## Web Page
+
+`web/` holds a static page that runs the same pipeline in the browser with [Pyodide](https://pyodide.org/): `index.html`, `app.js` and `style.css` for the page, `worker.js` for the Web Worker that runs Python. The page and the CLI both call `siemens_converter.pipeline`, so they cannot drift apart. Pyodide 314 runs Python 3.14, which is why `requires-python` is `>=3.14`.
+
+`web/build.py` builds the site into `build/site`: the page, the converter source and `template.xlsx` zipped from the checked-out commit, the pinned `pyodide-core` tarball (sha256 pinned in the script), the `micropip` and `packaging` wheels checked against the Pyodide lock file, and the `openpyxl` and `et_xmlfile` wheels pinned with hashes in `web/wheels.txt`. Nothing is loaded from a CDN when the page runs. To update Pyodide, change `PYODIDE_VERSION` and `CORE_SHA256` in `web/build.py`.
+
+```bash
+python web/build.py                       # writes build/site
+python -m http.server -d build/site 8000  # then open http://localhost:8000
+```
+
+The browser test converts the test fixtures in headless Chromium and compares the downloaded workbook, cell by cell, with the one the CLI writes. It also checks the refusals (a missing file, a malformed static data file, a file that is not a report), the warnings, and that the page makes no request outside its own origin.
+
+```bash
+pip install -e ".[web]"
+playwright install chromium
+pytest web/tests                          # SITE_DIR=<dir> tests another build
+```
+
+CI builds the site and runs this test on every pull request. `.github/workflows/pages.yml` publishes the site to GitHub Pages on every stable `v*` tag; pre-release tags (`v1.2.3-rc.1`) do not publish. There is no service worker: the page needs a connection, and the browser's HTTP cache keeps Pyodide after the first visit.
 
 ## Building the Windows Executable
 
