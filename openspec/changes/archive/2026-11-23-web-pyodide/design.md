@@ -30,7 +30,8 @@ joins them, and the extension routing of the two files, were written inline in `
 - **Online only.** No service worker: the browser's HTTP cache keeps Pyodide after the first visit.
   A service worker adds cache invalidation risk for little gain; offline users keep the `.exe`.
 - **Deploy on `v*` tags** with `actions/upload-pages-artifact` and `actions/deploy-pages`, so the
-  page matches a released version. Pull requests build the site and run the browser test, which
+  page matches a released version. A pre-release tag (`v1.2.3-rc.1`) does not deploy, so a
+  release candidate never replaces the page of the stable release. Pull requests build the site and run the browser test, which
   is what keeps the page working between releases.
 - **Browser test in Python, outside `tests/`.** It lives in `web/tests/` with Playwright, an
   optional `web` dependency, so the main suite and its coverage run need no browser.

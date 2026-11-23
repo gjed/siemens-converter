@@ -58,11 +58,11 @@ The page SHALL show a loading state while Pyodide loads, run the conversion in a
 
 ### Requirement: Published on release tags
 
-A workflow SHALL publish the site to GitHub Pages when a `v*` tag is pushed, with only the permissions `pages: write`, `id-token: write` and `contents: read`, so that the page always matches a released version. Pull requests SHALL build the site and run the browser test. The page is online only: there is no service worker.
+A workflow SHALL publish the site to GitHub Pages when a stable `v*` tag is pushed (a tag with a pre-release suffix such as `-rc.1` publishes nothing), with only the permissions `pages: write`, `id-token: write` and `contents: read`, so that the page always matches a released version. Pull requests SHALL build the site and run the browser test. The page is online only: there is no service worker.
 
 #### Scenario: Release tag pushed
 
-- **WHEN** a tag matching `v*` is pushed
+- **WHEN** a stable tag matching `v*` is pushed
 - **THEN** the workflow SHALL build the site from that commit and deploy it to GitHub Pages
 
 #### Scenario: Pull request
