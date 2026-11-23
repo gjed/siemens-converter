@@ -191,7 +191,7 @@ def test_template_tabella_2026_eur_cleared():
 # -- Static data template tests --
 
 
-def test_static_template_has_five_sheets():
+def test_static_template_has_six_sheets():
     wb = _load_static_template()
     assert wb.sheetnames == [
         "Inquilini",
@@ -199,7 +199,44 @@ def test_static_template_has_five_sheets():
         "Costi",
         "Contatori",
         "Letture_precedenti",
+        "Esercizio",
     ]
+
+
+def test_static_template_esercizio_layout():
+    ws = _load_static_template()["Esercizio"]
+    assert ws["A1"].value is not None  # title
+    assert [ws.cell(row=2, column=c).value is not None for c in range(1, 6)] == [
+        True
+    ] * 5
+    assert ws["A3"].value == "Anno dell'esercizio"
+    assert ws["A4"].value == "Data di inizio dell'esercizio"
+    assert ws["A5"].value == "Contacalorie centrale RISCALDAMENTO"
+    assert ws["A6"].value == "Contacalorie centrale ACS"
+    assert ws["C4"].number_format == "dd/mm/yyyy"
+    assert ws["E5"].number_format == "dd/mm/yyyy"
+
+
+def test_static_template_holds_no_exercise_data():
+    """Every cell a user fills in is empty: no name, millesimi, cost, reading or date."""
+    wb = _load_static_template()
+    inputs = {
+        "Inquilini": ("B3:C12",),
+        "Millesimali": ("B5:C14", "E5:E14"),
+        "Costi": ("B3:B8",),
+        "Contatori": ("C3:D5",),
+        "Letture_precedenti": ("B3:D12",),
+        "Esercizio": ("C3:E6",),
+    }
+    filled = [
+        f"{sheet}!{cell.coordinate}"
+        for sheet, ranges in inputs.items()
+        for rng in ranges
+        for row in wb[sheet][rng]
+        for cell in row
+        if cell.value is not None
+    ]
+    assert filled == []
 
 
 def test_static_template_inquilini_has_title_and_headers():
