@@ -41,3 +41,25 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  # The page that Pyodide runs in the browser, built and tested on every pull request.
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+
+      - name: Install dependencies
+        run: pip install -e ".[web]"
+
+      - name: Build the site
+        run: python web/build.py --out build/site
+
+      - name: Install Chromium
+        run: playwright install --with-deps chromium
+
+      - name: Test the page in a headless browser
+        run: pytest web/tests
