@@ -237,6 +237,12 @@ def _read_rows(path: Path) -> list[list[str]]:
         html = path.read_text(encoding="utf-8")
     except UnicodeDecodeError as exc:
         raise _not_a_report(path, "non contiene testo leggibile") from exc
+    except OSError as exc:
+        raise ReportError(
+            f"il file «{path.name}» non si può aprire per leggerlo. Controllare che "
+            "sia un file e non una cartella, che non sia aperto in un altro "
+            "programma e che si possa leggere, e ripetere la conversione."
+        ) from exc
 
     parser = _TableParser()
     parser.feed(html)

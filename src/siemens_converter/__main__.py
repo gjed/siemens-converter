@@ -194,7 +194,15 @@ def main() -> None:
     if _has_console():
         print(f"Scrittura di {output_path.name} ...")
 
-    write_xlsx(report, output_path, static_data=static_data)
+    try:
+        write_xlsx(report, output_path, static_data=static_data)
+    except OSError:
+        _fail(
+            f"Impossibile creare il file «{output_path.name}» nella cartella "
+            f"{output_path.parent}. Se è aperto in Excel, chiuderlo; altrimenti "
+            "controllare di poter scrivere in quella cartella. Poi ripetere la "
+            "conversione."
+        )
 
     warnings = ""
     if report.warnings:
