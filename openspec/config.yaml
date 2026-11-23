@@ -1,7 +1,7 @@
 context: |
   ## Purpose
 
-  Convert a Siemens FC_report into a "Riparto" XLSX workbook that apportions heating and water costs among the apartments of a condominium. The FC_report is an HTML table saved with an `.xls` extension. An optional static data `.xlsx`, filled in by the building administrator, adds what the report does not contain: tenant names, millesimali, yearly costs, main meter readings and previous readings. The output is a copy of the embedded `template.xlsx` with the readings injected, plus two generated sheets, `Inquilini` and `Dati Report`. Sibling of [sinapsi-converter](https://github.com/gjed/sinapsi-converter): same distribution model, different device manufacturer, input format and output.
+  Convert a Siemens FC_report into a "Riparto" XLSX workbook that apportions heating and water costs among the apartments of a condominium. The FC_report is an HTML table saved with an `.xls` extension. A static data `.xlsx`, filled in by the building administrator for each exercise, adds what the report does not contain: the exercise year and start date, tenant and owner names, millesimali, yearly costs, main meter readings, the start readings of the central heat meters and previous readings. The output is a copy of the embedded `template.xlsx`, which holds no exercise data, with the readings and the static data injected, plus two generated sheets, `Inquilini` and `Dati Report`. Sibling of [sinapsi-converter](https://github.com/gjed/sinapsi-converter): same distribution model, different device manufacturer, input format and output.
 
   ## Tech Stack
 
@@ -23,7 +23,7 @@ context: |
 
   ### Architecture Patterns
 
-  - Pipeline: `parse_fc_report` (+ optional `parse_static_data`) -> `write_xlsx`
+  - Pipeline: `parse_fc_report` + `parse_static_data` -> `write_xlsx`, which first checks the static data against the report
   - Pure dataclasses in models.py — no I/O
   - Every cost formula lives in `template.xlsx`; the writer injects values into fixed cells and never computes costs
   - The writer adds two generated sheets to the template copy: `Inquilini` (apartment and tenant list) and `Dati Report` (the FC_report device table)
@@ -53,7 +53,7 @@ context: |
 
   - End users are non-technical Italian speakers who run a Windows `.exe` by drag and drop. Every message they can see must be in plain Italian and say what to do.
   - Windows drag-and-drop `.exe` is the primary distribution method; the `.exe` is built with `--noconsole`, so users see message boxes and file dialogs, never a terminal
-  - Files dropped on the `.exe` arrive in no fixed order and are routed by extension: the `.xlsx` is the static data, the other file is the FC_report
+  - Files dropped on the `.exe` arrive in no fixed order and are routed by extension: the `.xlsx` is the static data, the other file is the FC_report; both are required
   - The FC_report is UTF-8 HTML with Italian decimal commas, not a real Excel file
   - `template.xlsx` is laid out for 10 apartments; the writer maps apartments 1-10 to fixed rows
   - PyInstaller bundles only `template.xlsx`; `static_data_template.xlsx` is downloaded by users from the release page
