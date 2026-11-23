@@ -14,10 +14,10 @@ This tool converts **Siemens FC_report** files (HTML-as-XLS exported by the Siem
 
 - **Three-sheet output** -- Ripartizione (cost apportionment with formulas), Tabella (cost table), Tabelle millesimali (proportional shares)
   > **Output a tre fogli** -- Ripartizione (ripartizione costi con formule), Tabella (tabella costi), Tabelle millesimali (quote proporzionali)
-- **Template-based** -- embedded XLSX template with all formulas; the tool only injects meter readings
-  > **Basato su template** -- template XLSX incorporato con tutte le formule; lo strumento inserisce solo le letture dei contatori
-- **Drag-and-drop** -- Windows users drop an FC_report `.xls` onto the `.exe`, done
-  > **Trascina e rilascia** -- gli utenti Windows trascinano un FC_report `.xls` sull'`.exe`, fatto
+- **Template-based** -- embedded XLSX template with all formulas and no exercise data; the tool only injects meter readings and the static data
+  > **Basato su template** -- template XLSX incorporato con tutte le formule e senza dati di un esercizio; lo strumento inserisce solo le letture dei contatori e i dati statici
+- **Drag-and-drop** -- Windows users drop an FC_report `.xls` and a static data `.xlsx` onto the `.exe`, done
+  > **Trascina e rilascia** -- gli utenti Windows trascinano un FC_report `.xls` e un file di dati statici `.xlsx` sull'`.exe`, fatto
 - **Cross-platform** -- runs on Linux and macOS for development, Windows for end users
   > **Multipiattaforma** -- funziona su Linux e macOS per lo sviluppo, Windows per gli utenti finali
 
@@ -25,12 +25,12 @@ This tool converts **Siemens FC_report** files (HTML-as-XLS exported by the Siem
 
 ```bash
 pip install -e .
-python -m siemens_converter path/to/FC_report.xls [path/to/static_data.xlsx]
+python -m siemens_converter path/to/FC_report.xls path/to/static_data.xlsx
 ```
 
-The optional second argument is a static data file with tenant names, millesimali, costs, meter readings, and previous-period readings. Download `static_data_template.xlsx` from the [latest release](https://github.com/gjed/siemens-converter/releases/latest) for the expected format.
+The second argument is required: a static data file with the exercise year and start date, the start readings of the central heat meters, tenant names, millesimali, costs, meter readings, and previous-period readings. Without it the converter stops with an error. Download `static_data_template.xlsx` from the [latest release](https://github.com/gjed/siemens-converter/releases/latest) for the expected format.
 
-> Il secondo argomento opzionale è un file di dati statici con nomi inquilini, millesimali, costi, letture contatori e letture precedenti. Scaricare il template `static_data_template.xlsx` dall'[ultima release](https://github.com/gjed/siemens-converter/releases/latest) per il formato atteso.
+> Il secondo argomento è obbligatorio: un file di dati statici con anno e data di inizio dell'esercizio, letture iniziali dei contatori di calore della centrale, nomi inquilini, millesimali, costi, letture contatori e letture precedenti. Senza, il convertitore si ferma con un errore. Scaricare il template `static_data_template.xlsx` dall'[ultima release](https://github.com/gjed/siemens-converter/releases/latest) per il formato atteso.
 
 ## Windows (.exe)
 
@@ -45,9 +45,9 @@ pyinstaller --onefile --paths src --name siemens-converter \
   scripts/pyinstaller_entry.py
 ```
 
-The `.exe` lands in `dist/`. Users drag an FC_report `.xls` onto it -- the XLSX appears next to the input file.
+The `.exe` lands in `dist/`. Users drag an FC_report `.xls` and a static data `.xlsx` onto it -- the XLSX appears next to the FC_report.
 
-> L'`.exe` viene creato in `dist/`. Gli utenti trascinano un FC_report `.xls` sull'eseguibile -- il file XLSX appare accanto al file di input.
+> L'`.exe` viene creato in `dist/`. Gli utenti trascinano un FC_report `.xls` e un file di dati statici `.xlsx` sull'eseguibile -- il file XLSX appare accanto al FC_report.
 
 ## Development
 
