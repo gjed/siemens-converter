@@ -36,7 +36,7 @@ Senza il file dei dati statici il risultato è incompleto. Leggi [Se non usi il 
 1. Aspetta la finestra con la scritta `Fatto!` e il nome del file creato.
 1. Premi `OK`.
 
-Non importa quale file selezioni per primo. Il programma li riconosce dall'estensione: il file `.xlsx` è quello dei dati statici, l'altro è il file FC_report.
+Non importa quale file selezioni per primo. Il programma li riconosce dall'estensione: il file `.xlsx` è quello dei dati statici, l'altro è il file FC_report. Se i due file sono entrambi `.xlsx` o nessuno dei due lo è, il programma lo dice e non converte nulla.
 
 Trascina al massimo due file. Il programma ignora quelli in più.
 
@@ -59,6 +59,8 @@ Il file creato si trova nella stessa cartella del file FC_report.
 Il suo nome è `Riparto_<numero di serie>_<data>.xlsx`, per esempio `Riparto_TE99999999_15-01-2026.xlsx`. Il numero di serie e la data (giorno-mese-anno) sono quelli scritti dentro il file FC_report.
 
 Se nella cartella c'è già un file con lo stesso nome, il programma lo sostituisce senza chiedere conferma. Se avevi modificato a mano quel file, prima salvane una copia con un altro nome.
+
+Se il programma trova qualcosa da controllare, crea comunque il file. Gli avvisi non fermano la conversione: compaiono nella finestra finale, sotto la scritta `Attenzione:`, e nel terminale prima della riga `Fatto:`. Che cosa significano e che cosa fare è spiegato in [Problemi e soluzioni](#problemi-e-soluzioni).
 
 ## Cosa contiene il file creato
 
@@ -188,69 +190,164 @@ Una riga per ogni appartamento, con le letture finali dell'anno precedente. Sono
 
 ## Problemi e soluzioni
 
-Quando qualcosa non va, il programma mostra una finestra con un messaggio. Alcuni messaggi sono in inglese. Cerca qui sotto il testo che vedi.
+Quando qualcosa non va, il programma mostra una finestra con un messaggio scritto in italiano. Il messaggio dice che cosa non va e che cosa fare. Cerca qui sotto l'inizio del testo che vedi.
 
-### `File not found:` seguito dal nome di un file
+### `Manca il file FC_report: è stato scelto solo` seguito dal nome di un file
+
+Hai scelto un solo file e il suo nome finisce con `.xlsx`. Il programma lo considera il file dei dati statici e non trova il file FC_report.
+
+1. Riapri la cartella che contiene il file FC_report.
+1. Scegli il file FC_report insieme al file dei dati statici, come spiegato in [Il file FC_report insieme al file dei dati statici](#il-file-fc_report-insieme-al-file-dei-dati-statici).
+1. Ripeti la conversione.
+
+### `Sono stati scelti due file .xlsx`
+
+Hai scelto due file che finiscono con `.xlsx`. Il programma ne accetta uno solo, il file dei dati statici, e non trova il file FC_report.
+
+1. Togli il file `.xlsx` in più.
+1. Scegli il file FC_report insieme al file dei dati statici.
+1. Ripeti la conversione.
+
+### `Sono stati scelti due file che non sono .xlsx`
+
+Hai scelto due file che non finiscono con `.xlsx`. Il programma accetta un solo file FC_report e vuole che il file dei dati statici sia un file `.xlsx`.
+
+1. Se vuoi convertire senza dati statici, scegli solo il file FC_report.
+1. Se vuoi usare i dati statici, scegli il file FC_report e il file dei dati statici. Il nome del file dei dati statici deve finire con `.xlsx`.
+1. Ripeti la conversione.
+
+### `Il file FC_report` seguito da un nome e da `non esiste`
 
 Il programma non trova il file FC_report.
 
 1. Controlla che il file esista ancora e che non sia stato spostato o rinominato.
 1. Ripeti la conversione.
 
-### `Static data file not found:` seguito dal nome di un file
+### `Il file dei dati statici` seguito da un nome e da `non esiste`
 
 Il programma non trova il file dei dati statici.
 
 1. Controlla che il file esista ancora e che non sia stato spostato o rinominato.
 1. Ripeti la conversione.
 
-### `Errore nel file dati statici: Static data file is missing required sheet(s):` seguito da uno o più nomi
+### `Errore nel report FC: il file` seguito da un nome e da `non è un report FC`
 
-Nel file dei dati statici mancano i fogli elencati nel messaggio. Succede se un foglio è stato rinominato o eliminato, oppure se hai scelto un file Excel che non è il file dei dati statici.
+Il file scelto come FC_report non è un file FC_report. Dopo `non è un report FC:` il messaggio dice perché. Per esempio:
+
+- `non contiene testo leggibile`: il file non è un file di testo. Succede se hai scelto un file Excel, un'immagine o un PDF.
+- `non contiene nessuna tabella`: il file è un testo, ma non è un report del sistema Siemens.
+- `la tabella è troppo corta` o `la tabella ha meno colonne del previsto`: il file è stato modificato o salvato in un altro formato, oppure è incompleto.
+- `il numero di serie` o `il numero dei dispositivi collegati` `non è un numero`: il file è stato modificato a mano.
+
+1. Controlla di aver scelto il file giusto. Il nome del file FC_report comincia con `FC_report` e finisce con `.xls`.
+1. Non aprire e non salvare di nuovo il file con Excel prima di convertirlo: Excel lo cambia.
+1. Se il file è quello giusto, scaricalo di nuovo dal sistema Siemens.
+1. Ripeti la conversione.
+
+### `Errore nel report FC:` seguito da un dispositivo e da `nella descrizione manca il numero dell'appartamento`
+
+Nel file FC_report la descrizione di un dispositivo non contiene il numero dell'appartamento. Il messaggio riporta la descrizione trovata. Il programma si aspetta una descrizione che cominci come `App, 01`.
+
+1. Fai correggere la descrizione del dispositivo nel sistema Siemens da chi lo gestisce.
+1. Scarica di nuovo il file FC_report.
+1. Ripeti la conversione.
+
+### `Errore nel report FC: il report non è completo e il riparto non è stato creato.`
+
+Il programma non ha creato il file `Riparto`, perché con questi dati il risultato sarebbe sbagliato. Il messaggio elenca che cosa non va in una o due liste.
+
+#### `Dispositivi mancanti:`
+
+Nel file FC_report non ci sono i dispositivi elencati. Ogni riga dice quale dispositivo manca: un contatore centrale (`Riscaldamento` o `Sanitario`), oppure un contacalorie o un contatore dell'acqua calda di un appartamento.
+
+1. Scarica di nuovo il file FC_report dal sistema Siemens.
+1. Ripeti la conversione.
+1. Se il messaggio compare ancora, fai controllare sull'impianto i dispositivi elencati da chi gestisce il sistema Siemens. Controlla che siano installati, alimentati e collegati.
+1. Quando i dispositivi tornano nel report, ripeti la conversione.
+
+#### `Letture mancanti o non valide:`
+
+Nel file FC_report c'è un dispositivo, ma una lettura che serve è vuota o non è un numero. Ogni riga dice quale dispositivo e quale lettura: energia, acqua calda o acqua fredda. Se la lettura non è un numero, la riga riporta il testo trovato.
+
+1. Scarica di nuovo il file FC_report dal sistema Siemens.
+1. Ripeti la conversione.
+1. Se il messaggio compare ancora, il dispositivo non ha trasmesso la lettura. Fallo controllare sull'impianto da chi gestisce il sistema Siemens.
+1. Quando il dispositivo trasmette la lettura, ripeti la conversione.
+
+### `Attenzione:` nella finestra `Fatto!`
+
+Il programma ha creato il file `Riparto`, ma ha trovato qualcosa da controllare. Ogni riga dopo `Attenzione:` è un avviso. Gli avvisi non fermano la conversione: leggili tutti e controlla il file prima di usarlo. Gli avvisi sono tre.
+
+#### `Il contatore centrale` seguito da `è stato letto il`
+
+Il contatore centrale è stato letto in un giorno diverso da quello dei contatori degli appartamenti. Il messaggio dice quanti giorni di differenza ci sono e le due date. I consumi del contatore centrale e quelli degli appartamenti non coprono lo stesso periodo.
+
+1. Apri il file creato e guarda il primo foglio. Le date di lettura dei contatori centrali sono nelle celle `D28` e `D31`, quelle degli appartamenti nelle celle `C76`, `C126` e `C178`.
+1. Se la differenza è di pochi giorni, decidi insieme all'amministratore se il riparto si può usare.
+1. Altrimenti fai leggere di nuovo tutti i contatori nello stesso giorno dal sistema Siemens, scarica un nuovo file FC_report e ripeti la conversione.
+
+#### `I contacalorie degli appartamenti non sono stati letti tutti lo stesso giorno`
+
+Lo stesso avviso esiste per `I contatori dell'acqua calda degli appartamenti`. Alcuni contatori degli appartamenti sono stati letti prima degli altri. Il messaggio elenca i contatori letti prima, con la loro data. Nel file creato c'è la data più recente.
+
+1. Apri il file creato e controlla nel primo foglio le letture dei contatori elencati. Una lettura fatta qualche giorno prima può essere più bassa di quella del giorno più recente.
+1. Se la differenza è di pochi giorni, decidi insieme all'amministratore se il riparto si può usare.
+1. Altrimenti fai leggere di nuovo i contatori elencati dal sistema Siemens, scarica un nuovo file FC_report e ripeti la conversione.
+
+#### `Lo stato di questi dispositivi nel report non è «Ok»`
+
+Il messaggio elenca i dispositivi che il sistema Siemens segnala con uno stato diverso da `Ok`, e tra parentesi lo stato. Se tra parentesi c'è `vuoto`, il report non indica nessuno stato. Le letture di questi dispositivi possono essere sbagliate.
+
+1. Apri il file creato e controlla nel primo foglio le letture di questi dispositivi. Confrontale con le letture precedenti e con quelle che leggi sul contatore.
+1. Se una lettura non è credibile, fai controllare il dispositivo sull'impianto da chi gestisce il sistema Siemens.
+1. Dopo il controllo scarica un nuovo file FC_report e ripeti la conversione. In alternativa correggi a mano la lettura nel file creato.
+
+### `Errore nel file dati statici:` seguito da un nome e da `non è un file dei dati statici`
+
+Il file scelto come file dei dati statici non è un file dei dati statici. Il messaggio dice perché:
+
+- `non si apre come file Excel (.xlsx)`: il file non è un vero file Excel `.xlsx`. Succede se hai scelto un altro tipo di file o se hai solo cambiato l'estensione di un file.
+- `manca il foglio` o `mancano i fogli`, seguito dai nomi: nel file mancano fogli del modello. Succede se un foglio è stato rinominato o eliminato.
 
 1. Controlla di aver scelto il file giusto.
 1. Apri il file con Excel.
 1. Controlla che i fogli si chiamino esattamente `Inquilini`, `Millesimali`, `Costi`, `Contatori` e `Letture_precedenti`.
-1. Se un foglio manca, scarica di nuovo il modello e ricopia i tuoi dati.
-1. Salva il file, chiudi Excel e ripeti la conversione.
+1. Se un foglio manca, scarica di nuovo il modello come spiegato in [Scaricare il modello](#scaricare-il-modello) e ricopia i tuoi dati.
+1. Salva il file come `Cartella di lavoro di Excel (*.xlsx)`, chiudi Excel e ripeti la conversione.
 
-### `Errore nel file dati statici: Unknown cost label(s) in Costi:` seguito da una o più voci
+### `Errore nel file dati statici:` seguito da un nome, da `foglio «Costi»` e da `queste voci di spesa non sono tra quelle accettate`
 
-Nel foglio `Costi` c'è una voce di spesa che il programma non conosce. Il messaggio la riporta in lettere minuscole.
+Nel foglio `Costi` c'è una voce di spesa che il programma non conosce. Il messaggio riporta ogni voce come l'hai scritta, con la cella, e elenca le voci accettate.
 
 1. Apri il file dei dati statici con Excel.
 1. Vai al foglio `Costi`.
-1. Nella colonna `Voce di spesa` cerca la voce riportata nel messaggio.
-1. Correggila con uno dei sei nomi elencati in [Foglio `Costi`](#foglio-costi), oppure elimina la riga.
+1. Cerca la voce nella cella indicata dal messaggio.
+1. Correggila con una delle voci elencate, scritta come nel modello (vedi [Foglio `Costi`](#foglio-costi)), oppure elimina la riga.
 1. Salva il file, chiudi Excel e ripeti la conversione.
 
-### `Errore nel file dati statici:` seguito da un altro testo in inglese
+### `Errore nel file dati statici:` seguito da un nome, da un foglio, da una cella e da `non è un numero`
 
-Il programma non riesce a leggere il file dei dati statici. Due esempi:
-
-- `could not convert string to float: 'abc'`: una cella che deve contenere un numero contiene del testo. Il testo tra apici è quello trovato nella cella.
-- `File is not a zip file`: il file non è un vero file Excel `.xlsx`.
+Una cella che deve contenere un numero contiene del testo. Il messaggio dice il foglio, la cella e il valore trovato. Se dice `non è un numero intero`, la cella deve contenere un numero senza decimali.
 
 1. Apri il file dei dati statici con Excel.
-1. Controlla che le celle dei numeri contengano solo numeri.
-1. Scegli `File`, poi `Salva con nome`, e salva come `Cartella di lavoro di Excel (*.xlsx)`.
-1. Chiudi Excel e ripeti la conversione.
+1. Vai al foglio e alla cella indicati.
+1. Scrivi solo il numero, senza unità di misura e senza il simbolo `€`.
+1. Salva il file, chiudi Excel e ripeti la conversione.
 
-### `Impossibile aprire la finestra di selezione file:` seguito da un testo
+### `Impossibile aprire la finestra di selezione dei file.`
 
 Dopo il doppio clic il programma non riesce ad aprire la finestra per scegliere il file.
 
 1. Premi `OK`.
 1. Converti [trascinando i file](#convertire-trascinando-i-file) sopra l'icona del programma.
 
-### Una finestra dal titolo `siemens-converter - Errore` con un lungo testo in inglese
+### `La conversione non è riuscita per un errore imprevisto del programma.`
 
-Il programma ha incontrato un errore che non sa spiegare. Le cause più frequenti sono due.
+Questa frase apre una finestra dal titolo `siemens-converter - Errore`. Sotto la frase, dopo `Dettagli tecnici:`, c'è un testo tecnico in inglese. Il programma ha incontrato un errore che non sa spiegare. Una causa frequente è che il file `Riparto` di una conversione precedente è aperto in Excel.
 
-- **Il file trascinato non è un file FC_report.** Succede, per esempio, se trascini solo il file dei dati statici: in quel caso il testo finisce con una riga che comincia con `UnicodeDecodeError`. Ripeti la conversione con il file FC_report esportato dal sistema Siemens.
-- **Il file `Riparto` di una conversione precedente è aperto in Excel.** Chiudi quel file e ripeti la conversione.
-
-Se il problema resta, fai una foto della finestra e inviala a chi ti ha fornito il programma.
+1. Chiudi in Excel il file `Riparto` di una conversione precedente.
+1. Ripeti la conversione.
+1. Se la finestra compare ancora, fai una foto della finestra, o copia il testo, e inviala a chi ti ha fornito il programma insieme al nome dei file che stavi convertendo.
 
 ## Per sviluppatori: riga di comando
 
