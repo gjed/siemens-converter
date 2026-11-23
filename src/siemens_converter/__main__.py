@@ -94,12 +94,12 @@ _FIND_REPORT = (
 )
 
 
-def _route_files(paths: list[Path]) -> tuple[Path, Path | None]:
-    """Split the files given into (FC_report, static data or None).
+def _route_files(paths: list[Path]) -> tuple[Path, Path]:
+    """Split the files given into (FC_report, static data).
 
     Explorer does not preserve drag order, so the .xlsx is the static data and
     the other file is the FC_report. Exits with a message when the files given
-    are not exactly one of each, or just the FC_report.
+    are not exactly one of each.
     """
     static = [p for p in paths if p.suffix.lower() == ".xlsx"]
     reports = [p for p in paths if p.suffix.lower() != ".xlsx"]
@@ -120,11 +120,17 @@ def _route_files(paths: list[Path]) -> tuple[Path, Path | None]:
         _fail(
             f"Sono stati scelti due file che non sono .xlsx, «{reports[0].name}» e "
             f"«{reports[1].name}», ma ne serve uno solo: il file FC_report. Il file "
-            "dei dati statici deve essere un file .xlsx. Scegliere il solo file "
-            "FC_report, oppure il file FC_report insieme al file dei dati statici, "
-            "e ripetere la conversione."
+            "dei dati statici deve essere un file .xlsx. Scegliere il file "
+            "FC_report insieme al file dei dati statici e ripetere la conversione."
         )
-    return reports[0], static[0] if static else None
+    if not static:
+        from siemens_converter.static_reader import _TEMPLATE_ADVICE
+
+        _fail(
+            f"Manca il file dei dati statici: è stato scelto solo «{reports[0].name}», "
+            f"il file FC_report. {_TEMPLATE_ADVICE}"
+        )
+    return reports[0], static[0]
 
 
 def main() -> None:
@@ -141,25 +147,25 @@ def main() -> None:
         if fc_str is None:
             sys.exit(0)  # User cancelled
 
-        # Second dialog for static data (optional — user can cancel)
+        # Second dialog for static data (required: cancelling is refused by _route_files)
         static_str = _win_open_file_dialog(
-            "Seleziona dati statici (.xlsx) — o Annulla per saltare",
+            "Seleziona dati statici (.xlsx)",
             "Excel files\0*.xlsx\0All files\0*.*\0",
         )
         picked = [Path(fc_str)] + ([Path(static_str)] if static_str else [])
         fc_path, static_path = _route_files(picked)
     else:
         print(
-            "Uso: siemens-converter <FC_report.xls> [dati_statici.xlsx]\n"
+            "Uso: siemens-converter <FC_report.xls> <dati_statici.xlsx>\n"
             "\n"
             "Argomenti:\n"
             "  FC_report.xls      il file esportato dal sistema Siemens (obbligatorio)\n"
-            "  dati_statici.xlsx  il file dei dati statici (facoltativo)"
+            "  dati_statici.xlsx  il file dei dati statici (obbligatorio)"
         )
         sys.exit(1)
 
     for path, what in ((fc_path, "FC_report"), (static_path, "dei dati statici")):
-        if path is not None and not path.exists():
+        if not path.exists():
             _fail(
                 f"Il file {what} «{path}» non esiste. Controllare che non sia stato "
                 "spostato o rinominato e ripetere la conversione."
@@ -177,15 +183,12 @@ def main() -> None:
     except ReportError as exc:
         _fail(f"Errore nel report FC: {exc}")
 
-    # Parse static data if provided
-    static_data = None
-    if static_path is not None:
-        if _has_console():
-            print(f"Lettura dei dati statici da {static_path.name} ...")
-        try:
-            static_data = parse_static_data(static_path)
-        except StaticDataError as exc:
-            _fail(f"Errore nel file dati statici: {exc}")
+    if _has_console():
+        print(f"Lettura dei dati statici da {static_path.name} ...")
+    try:
+        static_data = parse_static_data(static_path)
+    except StaticDataError as exc:
+        _fail(f"Errore nel file dati statici: {exc}")
 
     date_safe = report.header.report_date.replace("/", "-")
     out_name = f"Riparto_{report.header.serial}_{date_safe}.xlsx"
@@ -195,7 +198,7 @@ def main() -> None:
         print(f"Scrittura di {output_path.name} ...")
 
     try:
-        write_xlsx(report, output_path, static_data=static_data)
+        write_xlsx(report, output_path, static_data)
     except OSError:
         _fail(
             f"Impossibile creare il file «{output_path.name}» nella cartella "

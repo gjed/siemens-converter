@@ -12,9 +12,11 @@ from pathlib import Path
 import openpyxl
 import pytest
 
+from siemens_converter.models import StaticData
 from siemens_converter.parser import ReportError, parse_fc_report
 
 FIXTURE = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
+STATIC_DATA = Path(__file__).parent / "fixtures" / "static_data_TEST.xlsx"
 
 # Column indexes of the device table
 DATE, STATUS, HEAT_ENERGY, WATER_VOLUME, AUX1_VOLUME = 9, 11, 15, 24, 26
@@ -237,7 +239,7 @@ def test_each_date_cell_is_dated_from_its_own_meters(tmp_path):
                 row[DATE] = "2026/01/14"
 
     out = tmp_path / "out.xlsx"
-    write_xlsx(parse_fc_report(edited_report(tmp_path, edit)), out)
+    write_xlsx(parse_fc_report(edited_report(tmp_path, edit)), out, StaticData())
 
     ws = openpyxl.load_workbook(out).worksheets[0]
     assert {ref: f"{ws[ref].value:%Y-%m-%d}" for ref in DATE_CELLS} == {
@@ -288,7 +290,7 @@ def run_main(
     import siemens_converter.__main__ as cli
 
     boxes = [] if boxes is None else boxes
-    monkeypatch.setattr(sys, "argv", ["siemens-converter", str(path)])
+    monkeypatch.setattr(sys, "argv", ["siemens-converter", str(path), str(STATIC_DATA)])
     monkeypatch.setattr(cli, "_has_console", lambda: console)
     monkeypatch.setattr(cli, "_msgbox", lambda title, text: boxes.append((title, text)))
     cli.main()

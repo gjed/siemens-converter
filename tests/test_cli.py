@@ -76,19 +76,20 @@ def test_usage_on_console(monkeypatch, capsys):
     assert code == 1
     assert boxes == []
     assert out == (
-        "Uso: siemens-converter <FC_report.xls> [dati_statici.xlsx]\n"
+        "Uso: siemens-converter <FC_report.xls> <dati_statici.xlsx>\n"
         "\n"
         "Argomenti:\n"
         "  FC_report.xls      il file esportato dal sistema Siemens (obbligatorio)\n"
-        "  dati_statici.xlsx  il file dei dati statici (facoltativo)\n"
+        "  dati_statici.xlsx  il file dei dati statici (obbligatorio)\n"
     )
 
 
 @both_ways
 def test_report_not_found(monkeypatch, capsys, tmp_path, console):
     missing = tmp_path / "FC_report_nuovo.xls"
+    static = copy(STATIC_DATA, tmp_path)
 
-    assert refusal(monkeypatch, capsys, missing, console=console) == (
+    assert refusal(monkeypatch, capsys, missing, static, console=console) == (
         f"Il file FC_report «{missing}» non esiste. Controllare che non sia stato "
         "spostato o rinominato e ripetere la conversione."
     )
@@ -122,6 +123,17 @@ def test_only_static_data_given(monkeypatch, capsys, tmp_path, console):
 
 
 @both_ways
+def test_only_report_given(monkeypatch, capsys, tmp_path, console):
+    report = copy(FC_REPORT, tmp_path)
+
+    assert refusal(monkeypatch, capsys, report, console=console) == (
+        f"Manca il file dei dati statici: è stato scelto solo «{report.name}», il "
+        f"file FC_report. {TEMPLATE_ADVICE}"
+    )
+    assert list(tmp_path.glob("Riparto_*.xlsx")) == []
+
+
+@both_ways
 def test_two_xlsx_given(monkeypatch, capsys, tmp_path, console):
     first = copy(STATIC_DATA, tmp_path)
     second = copy(STATIC_DATA, tmp_path, "dati_2025.xlsx")
@@ -142,10 +154,33 @@ def test_two_files_that_are_not_xlsx_given(monkeypatch, capsys, tmp_path, consol
     assert refusal(monkeypatch, capsys, first, second, console=console) == (
         f"Sono stati scelti due file che non sono .xlsx, «{first.name}» e "
         f"«{second.name}», ma ne serve uno solo: il file FC_report. Il file dei "
-        "dati statici deve essere un file .xlsx. Scegliere il solo file "
-        "FC_report, oppure il file FC_report insieme al file dei dati statici, e "
-        "ripetere la conversione."
+        "dati statici deve essere un file .xlsx. Scegliere il file FC_report "
+        "insieme al file dei dati statici e ripetere la conversione."
     )
+    assert list(tmp_path.glob("Riparto_*.xlsx")) == []
+
+
+def test_cancelling_the_static_data_dialog_is_refused(monkeypatch, capsys, tmp_path):
+    report = copy(FC_REPORT, tmp_path)
+    titles: list[str] = []
+
+    def pick(title, types):
+        titles.append(title)
+        return str(report) if len(titles) == 1 else None
+
+    monkeypatch.setattr(cli, "_win_open_file_dialog", pick)
+
+    code, out, boxes = run(monkeypatch, capsys, console=False)
+
+    assert code == 1
+    assert titles == ["Seleziona FC_report (.xls)", "Seleziona dati statici (.xlsx)"]
+    assert boxes == [
+        (
+            "Errore",
+            f"Manca il file dei dati statici: è stato scelto solo «{report.name}», "
+            f"il file FC_report. {TEMPLATE_ADVICE}",
+        )
+    ]
     assert list(tmp_path.glob("Riparto_*.xlsx")) == []
 
 
@@ -188,11 +223,13 @@ def test_dialog_cannot_open(monkeypatch):
 @both_ways
 def test_report_is_not_text(monkeypatch, capsys, tmp_path, console):
     not_a_report = copy(STATIC_DATA, tmp_path, "FC_report_sbagliato.xls")
+    static = copy(STATIC_DATA, tmp_path)
 
     assert refusal(
         monkeypatch,
         capsys,
         not_a_report,
+        static,
         console=console,
         progress=f"Lettura del report {not_a_report.name} ...\n",
     ) == (
@@ -249,11 +286,13 @@ def test_static_data_value_is_not_a_number(monkeypatch, capsys, tmp_path, consol
 def test_report_is_a_folder(monkeypatch, capsys, tmp_path, console):
     folder = tmp_path / "FC_report_cartella.xls"
     folder.mkdir()
+    static = copy(STATIC_DATA, tmp_path)
 
     assert refusal(
         monkeypatch,
         capsys,
         folder,
+        static,
         console=console,
         progress=f"Lettura del report {folder.name} ...\n",
     ) == (
@@ -267,6 +306,7 @@ def test_report_is_a_folder(monkeypatch, capsys, tmp_path, console):
 @both_ways
 def test_output_cannot_be_written(monkeypatch, capsys, tmp_path, console):
     report = copy(FC_REPORT, tmp_path)
+    static = copy(STATIC_DATA, tmp_path)
     output = tmp_path / "Riparto_TE99999999_15-01-2026.xlsx"
     output.mkdir()  # a file of that name cannot replace a folder
 
@@ -274,8 +314,11 @@ def test_output_cannot_be_written(monkeypatch, capsys, tmp_path, console):
         monkeypatch,
         capsys,
         report,
+        static,
         console=console,
-        progress=READING + f"Scrittura di {output.name} ...\n",
+        progress=READING
+        + f"Lettura dei dati statici da {static.name} ...\n"
+        + f"Scrittura di {output.name} ...\n",
     ) == (
         f"Impossibile creare il file «{output.name}» nella cartella {tmp_path}. "
         "Se è aperto in Excel, chiuderlo; altrimenti controllare di poter "
@@ -308,14 +351,18 @@ def test_windows_console_waits_for_enter(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr("builtins.input", prompts.append)
 
-    run(monkeypatch, capsys, copy(FC_REPORT, tmp_path))
+    run(monkeypatch, capsys, copy(FC_REPORT, tmp_path), copy(STATIC_DATA, tmp_path))
 
     assert prompts == ["\nPremere Invio per chiudere..."]
 
 
 def test_final_message_box(monkeypatch, capsys, tmp_path):
     code, out, boxes = run(
-        monkeypatch, capsys, copy(FC_REPORT, tmp_path), console=False
+        monkeypatch,
+        capsys,
+        copy(FC_REPORT, tmp_path),
+        copy(STATIC_DATA, tmp_path),
+        console=False,
     )
 
     assert code is None
@@ -380,25 +427,6 @@ def test_last_resort_in_message_box(monkeypatch):
     ]
 
 
-def test_main_success_single_file(monkeypatch, tmp_path):
-    """Single FC_report argument — backward compatible."""
-    input_file = tmp_path / FC_REPORT.name
-    shutil.copy(FC_REPORT, input_file)
-
-    monkeypatch.setattr(sys, "argv", ["siemens-converter", str(input_file)])
-    from siemens_converter.__main__ import main
-
-    main()
-
-    outputs = list(tmp_path.glob("Riparto_*.xlsx"))
-    assert len(outputs) == 1
-
-    # Inquilini tenant column should be empty (no static data)
-    wb = openpyxl.load_workbook(outputs[0])
-    ws = wb["Inquilini"]
-    assert ws["B2"].value is None
-
-
 def test_main_success_two_files(monkeypatch, tmp_path):
     """Both FC_report and static data arguments."""
     input_file = tmp_path / FC_REPORT.name
@@ -430,6 +458,13 @@ def test_main_success_two_files(monkeypatch, tmp_path):
     # Costs should be populated
     ws_tab = wb["Tabella"]
     assert ws_tab.cell(row=3, column=5).value == 310.5  # Energia elettrica
+
+    # Exercise data and owner names should be populated
+    ws_rip = wb["Ripartizione"]
+    assert ws_rip["C27"].value == 24000  # heating start reading
+    assert ws_rip["C30"].value == 22000  # ACS start reading
+    assert ws_rip["A28"].value.endswith("FINE GESTIONE 25")
+    assert wb["Inquilini"]["A2"].value == "Rossi Mario"
 
 
 def test_main_two_files_reversed_order(monkeypatch, tmp_path):
