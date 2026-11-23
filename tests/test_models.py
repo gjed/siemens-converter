@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import pytest
+
 from siemens_converter.models import (
     ApartmentInfo,
     CentralMeter,
@@ -119,6 +121,16 @@ def test_extract_apartment_number_no_space_dash():
 
 def test_extract_apartment_number_double_space():
     assert extract_apartment_number("App, 01 Rossi Mario  - Gialli") == 1
+
+
+def test_extract_apartment_number_missing_is_in_italian():
+    with pytest.raises(ValueError) as excinfo:
+        extract_apartment_number("Appartamento tre")
+
+    assert str(excinfo.value) == (
+        "nella descrizione «Appartamento tre» manca il numero dell'appartamento, "
+        "che deve comparire come «App, 01»"
+    )
 
 
 # -- Static data models --
