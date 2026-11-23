@@ -331,7 +331,7 @@ def test_warnings_on_console_before_done(monkeypatch, tmp_path, capsys):
 
     out = capsys.readouterr().out
     assert "Attenzione:\n- Lo stato di questi dispositivi" in out
-    assert out.index("Attenzione:") < out.index("Done:")
+    assert out.index("Attenzione:") < out.index("Fatto:")
     assert len(list(tmp_path.glob("Riparto_*.xlsx"))) == 1
 
 
