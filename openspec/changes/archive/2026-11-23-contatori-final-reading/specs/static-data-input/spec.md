@@ -19,7 +19,7 @@ The Contatori sheet SHALL contain each of the three required meter rows exactly 
 - **WHEN** the final reading of a meter of the Contatori sheet is lower than its initial reading
 - **THEN** the function SHALL raise a `StaticDataError` that names the file, the sheet and the cell of the final reading, and gives both readings
 
-#### Scenario: Equal readings
+#### Scenario: Equal meter readings
 
 - **WHEN** the final reading of a meter of the Contatori sheet equals its initial reading
 - **THEN** the function SHALL accept the row

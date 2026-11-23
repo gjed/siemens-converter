@@ -183,7 +183,7 @@ On every sheet of the static data file the reader SHALL accept data rows, entire
 
 ### Requirement: Utility meter rows are required
 
-The Contatori sheet SHALL contain each of the three required meter rows exactly once.
+The Contatori sheet SHALL contain each of the three required meter rows exactly once, and the final reading of a row SHALL NOT be lower than its initial reading.
 
 #### Scenario: Missing meter row
 
@@ -194,6 +194,16 @@ The Contatori sheet SHALL contain each of the three required meter rows exactly 
 
 - **WHEN** a cost item or a meter appears in two rows
 - **THEN** the function SHALL raise a `StaticDataError` that names the file, the sheet, the item and both cells
+
+#### Scenario: Final reading below the initial reading
+
+- **WHEN** the final reading of a meter of the Contatori sheet is lower than its initial reading
+- **THEN** the function SHALL raise a `StaticDataError` that names the file, the sheet and the cell of the final reading, and gives both readings
+
+#### Scenario: Equal meter readings
+
+- **WHEN** the final reading of a meter of the Contatori sheet equals its initial reading
+- **THEN** the function SHALL accept the row
 
 ### Requirement: Exercise data
 
