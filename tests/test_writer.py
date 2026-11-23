@@ -11,7 +11,9 @@ from siemens_converter.writer import write_xlsx
 from siemens_converter.models import (
     ApartmentInfo,
     CentralMeter,
+    CentralMeterStart,
     CostItem,
+    ExerciseInfo,
     HeatAllocator,
     MeterReading,
     Millesimali,
@@ -51,13 +53,13 @@ def _make_report():
 
 def test_output_file_created(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     assert out.exists()
 
 
 def test_central_meter_riscaldamento(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     ws = wb.worksheets[0]
     assert ws["C28"].value == 29213
@@ -65,7 +67,7 @@ def test_central_meter_riscaldamento(tmp_path):
 
 def test_central_meter_sanitario(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     ws = wb.worksheets[0]
     assert ws["C31"].value == 31310
@@ -82,7 +84,7 @@ def test_reading_date(tmp_path):
         wm.readout_date = "2026/03/13"
 
     out = tmp_path / "output.xlsx"
-    write_xlsx(report, out)
+    write_xlsx(report, out, StaticData())
     ws = openpyxl.load_workbook(out).worksheets[0]
 
     assert ws["D28"].value == datetime(2026, 3, 2)
@@ -99,7 +101,7 @@ def test_reading_date_same_kind_different_days(tmp_path):
     report.heat_allocators[1].readout_date = "2026/03/10"
 
     out = tmp_path / "output.xlsx"
-    write_xlsx(report, out)
+    write_xlsx(report, out, StaticData())
     ws = openpyxl.load_workbook(out).worksheets[0]
 
     assert ws["C76"].value == datetime(2026, 3, 14)
@@ -113,7 +115,7 @@ def test_reading_date_blank(tmp_path):
     report.central_meters[0].readout_date = ""
 
     out = tmp_path / "output.xlsx"
-    write_xlsx(report, out)
+    write_xlsx(report, out, StaticData())
     ws = openpyxl.load_workbook(out).worksheets[0]
 
     assert ws["D28"].value is None
@@ -122,7 +124,7 @@ def test_reading_date_blank(tmp_path):
 
 def test_heat_allocator_values(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     ws = wb.worksheets[0]
     assert ws["C78"].value == 5243  # 5.243 MWh * 1000
@@ -131,7 +133,7 @@ def test_heat_allocator_values(tmp_path):
 
 def test_water_meter_values(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     ws = wb.worksheets[0]
     assert ws["C130"].value == 31.613
@@ -140,7 +142,7 @@ def test_water_meter_values(tmp_path):
 
 def test_afs_values(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     ws = wb.worksheets[0]
     assert ws["C182"].value == 45.72
@@ -149,7 +151,7 @@ def test_afs_values(tmp_path):
 
 def test_five_sheets(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     assert len(wb.sheetnames) == 5
     assert "Inquilini" in wb.sheetnames
@@ -158,14 +160,14 @@ def test_five_sheets(tmp_path):
 
 def test_dati_report_sheet_exists(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     assert "Dati Report" in wb.sheetnames
 
 
 def test_dati_report_metadata(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     ws = wb["Dati Report"]
     # Row 1: metadata labels in FC_report column positions
@@ -188,7 +190,7 @@ def test_dati_report_metadata(tmp_path):
 
 def test_millesimali_names_reference_inquilini(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     ws = wb["Tabelle millesimali"]
     # Names come from Inquilini sheet via formulas
@@ -200,7 +202,7 @@ def test_millesimali_names_reference_inquilini(tmp_path):
 
 def test_inquilini_sheet(tmp_path):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     ws = wb["Inquilini"]
     # Header
@@ -217,7 +219,7 @@ def test_inquilini_sheet(tmp_path):
 def test_ripartizione_references_inquilini(tmp_path):
     """Apartment cells in Ripartizione should reference Inquilini sheet."""
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out)
+    write_xlsx(_make_report(), out, StaticData())
     wb = openpyxl.load_workbook(out)
     ws = wb.worksheets[0]
     # Summary row 3 (apt 1) = owner -> Inquilini!A2
@@ -235,7 +237,7 @@ def test_inquilini_has_fc_report_names(tmp_path):
     fixture = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
     report = parse_fc_report(fixture)
     out = tmp_path / "output.xlsx"
-    write_xlsx(report, out)
+    write_xlsx(report, out, StaticData())
 
     wb = openpyxl.load_workbook(out)
     ws = wb["Inquilini"]
@@ -252,7 +254,7 @@ def test_dati_report_full_fc_data(tmp_path):
     fixture = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
     report = parse_fc_report(fixture)
     out = tmp_path / "output.xlsx"
-    write_xlsx(report, out)
+    write_xlsx(report, out, StaticData())
 
     wb = openpyxl.load_workbook(out)
     ws = wb["Dati Report"]
@@ -281,7 +283,7 @@ def test_dati_report_hidden_columns(tmp_path):
     fixture = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
     report = parse_fc_report(fixture)
     out = tmp_path / "output.xlsx"
-    write_xlsx(report, out)
+    write_xlsx(report, out, StaticData())
 
     wb = openpyxl.load_workbook(out)
     ws = wb["Dati Report"]
@@ -303,7 +305,7 @@ def test_dati_report_formatting(tmp_path):
     fixture = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
     report = parse_fc_report(fixture)
     out = tmp_path / "output.xlsx"
-    write_xlsx(report, out)
+    write_xlsx(report, out, StaticData())
 
     wb = openpyxl.load_workbook(out)
     ws = wb["Dati Report"]
@@ -338,7 +340,7 @@ def test_full_pipeline(tmp_path):
     fixture = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
     report = parse_fc_report(fixture)
     out = tmp_path / "output.xlsx"
-    write_xlsx(report, out)
+    write_xlsx(report, out, StaticData())
 
     wb = openpyxl.load_workbook(out)
     ws = wb.worksheets[0]
@@ -381,121 +383,151 @@ def _make_static_data():
     return StaticData(
         apartments=[
             ApartmentInfo(1, "Rossi Mario", "Bianchi Anna"),
-            ApartmentInfo(2, "Verdi Giuseppe", "Neri Luigi"),
+            ApartmentInfo(2, "", "Neri Luigi"),
         ],
         millesimali=[
-            Millesimali(1, 20, 1344.03, 1101.36),
-            Millesimali(2, 21, 2595.68, 1297.82),
+            Millesimali(1, 101, 1250.5, 820.0),
+            Millesimali(2, 102, 1840.25, 1105.5),
         ],
         costs=[
-            CostItem("Energia elettrica", 263.44),
-            CostItem("Gas metano", 2141.0),
+            CostItem("Energia elettrica", 310.5),
+            CostItem("Gas metano", 2450.0),
             CostItem("Acqua condominio", 0.0),
-            CostItem("Conduzione e manutenzione", 280.0),
-            CostItem("Contabilizzazione", 68.2),
-            CostItem("Acqua sanitaria manutenzione", 0.0),
+            CostItem("Conduzione e manutenzione", 420.0),
+            CostItem("Contabilizzazione", 85.5),
+            CostItem("Acqua sanitaria manutenzione", 150.0),
         ],
         meters=[
-            MeterReading("Energia elettrica CT", "kWh", 0, 1086),
-            MeterReading("Gas metano CT", "mc", 0, 1718),
-            MeterReading("Acqua generale", "mc", 0, 680),
+            MeterReading("Energia elettrica CT", "kWh", 5000, 6150),
+            MeterReading("Gas metano CT", "mc", 12000, 13800),
+            MeterReading("Acqua generale", "mc", 3000, 3700),
         ],
         previous_readings=[
-            PreviousReading(1, 4048, 25.5, 10.2),
-            PreviousReading(2, 4727, 30.1, 12.5),
+            PreviousReading(1, 4200, 12.5, 20.4),
+            PreviousReading(2, 5000, 20.1, 15.2),
+        ],
+        exercise=ExerciseInfo(2026, datetime(2025, 12, 31)),
+        central_meters=[
+            CentralMeterStart("Riscaldamento", 24000),
+            CentralMeterStart("Sanitario", 22000),
         ],
     )
 
 
-def test_static_data_tenant_names(tmp_path):
-    """Inquilini column B should have tenant names when static data provided."""
+def _write(tmp_path, static_data=None, report=None):
     out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out, static_data=_make_static_data())
-    wb = openpyxl.load_workbook(out)
-    ws = wb["Inquilini"]
+    write_xlsx(report or _make_report(), out, static_data or _make_static_data())
+    return openpyxl.load_workbook(out)
+
+
+def test_static_data_tenant_names(tmp_path):
+    """Inquilini column B should have the tenant names."""
+    ws = _write(tmp_path)["Inquilini"]
     assert ws["B2"].value == "Bianchi Anna"
     assert ws["B3"].value == "Neri Luigi"
 
 
+def test_static_data_owner_names(tmp_path):
+    """Inquilini column A holds the owner when given, else the device description."""
+    ws = _write(tmp_path)["Inquilini"]
+    assert ws["A2"].value == "Rossi Mario"
+    assert ws["A3"].value == "App, 02 Bianchi"
+
+
 def test_static_data_millesimali(tmp_path):
     """Tabelle millesimali should have energy values and subalterno."""
-    out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out, static_data=_make_static_data())
-    wb = openpyxl.load_workbook(out)
-    ws = wb["Tabelle millesimali"]
+    ws = _write(tmp_path)["Tabelle millesimali"]
     # Apartment 1 -> row 4
-    assert ws.cell(row=4, column=2).value == 20  # subalterno
-    assert ws.cell(row=4, column=3).value == 1344.03  # heat energy kWh
-    assert ws.cell(row=4, column=5).value == 1101.36  # water energy kWh
+    assert ws.cell(row=4, column=2).value == 101  # subalterno
+    assert ws.cell(row=4, column=3).value == 1250.5  # heat energy kWh
+    assert ws.cell(row=4, column=5).value == 820.0  # water energy kWh
     # Apartment 2 -> row 5
-    assert ws.cell(row=5, column=2).value == 21
-    assert ws.cell(row=5, column=3).value == 2595.68
+    assert ws.cell(row=5, column=2).value == 102
+    assert ws.cell(row=5, column=3).value == 1840.25
 
 
 def test_static_data_costs(tmp_path):
     """Tabella should have cost amounts in E3-E8."""
-    out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out, static_data=_make_static_data())
-    wb = openpyxl.load_workbook(out)
-    ws = wb["Tabella"]
-    assert ws.cell(row=3, column=5).value == 263.44  # Energia elettrica
-    assert ws.cell(row=4, column=5).value == 2141.0  # Gas metano
+    ws = _write(tmp_path)["Tabella"]
+    assert ws.cell(row=3, column=5).value == 310.5  # Energia elettrica
+    assert ws.cell(row=4, column=5).value == 2450.0  # Gas metano
     assert ws.cell(row=5, column=5).value == 0.0  # Acqua
-    assert ws.cell(row=6, column=5).value == 280.0  # Conduzione
-    assert ws.cell(row=7, column=5).value == 68.2  # Contabilizzazione
-    assert ws.cell(row=8, column=5).value == 0.0  # Acqua sanitaria
+    assert ws.cell(row=6, column=5).value == 420.0  # Conduzione
+    assert ws.cell(row=7, column=5).value == 85.5  # Contabilizzazione
+    assert ws.cell(row=8, column=5).value == 150.0  # Acqua sanitaria
 
 
 def test_static_data_meter_readings(tmp_path):
     """Tabella should have meter readings in F20-G22."""
-    out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out, static_data=_make_static_data())
-    wb = openpyxl.load_workbook(out)
-    ws = wb["Tabella"]
-    assert ws.cell(row=20, column=6).value == 0  # elettrica initial
-    assert ws.cell(row=20, column=7).value == 1086  # elettrica final
-    assert ws.cell(row=21, column=6).value == 0  # gas initial
-    assert ws.cell(row=21, column=7).value == 1718  # gas final
-    assert ws.cell(row=22, column=6).value == 0  # acqua initial
-    assert ws.cell(row=22, column=7).value == 680  # acqua final
+    ws = _write(tmp_path)["Tabella"]
+    assert ws.cell(row=20, column=6).value == 5000  # elettrica initial
+    assert ws.cell(row=20, column=7).value == 6150  # elettrica final
+    assert ws.cell(row=21, column=6).value == 12000  # gas initial
+    assert ws.cell(row=21, column=7).value == 13800  # gas final
+    assert ws.cell(row=22, column=6).value == 3000  # acqua initial
+    assert ws.cell(row=22, column=7).value == 3700  # acqua final
 
 
 def test_static_data_previous_readings(tmp_path):
     """Ripartizione previous readings in column B."""
-    out = tmp_path / "output.xlsx"
-    write_xlsx(_make_report(), out, static_data=_make_static_data())
-    wb = openpyxl.load_workbook(out)
-    ws = wb.worksheets[0]
+    ws = _write(tmp_path).worksheets[0]
     # Apt 1: heat row 78, water row 130, AFS row 182
-    assert ws.cell(row=78, column=2).value == 4048  # heat prev
-    assert ws.cell(row=130, column=2).value == 25.5  # water prev
-    assert ws.cell(row=182, column=2).value == 10.2  # AFS prev
+    assert ws.cell(row=78, column=2).value == 4200  # heat prev
+    assert ws.cell(row=130, column=2).value == 12.5  # water prev
+    assert ws.cell(row=182, column=2).value == 20.4  # AFS prev
     # Apt 2: heat row 80, water row 132, AFS row 184
-    assert ws.cell(row=80, column=2).value == 4727
-    assert ws.cell(row=132, column=2).value == 30.1
-    assert ws.cell(row=184, column=2).value == 12.5
+    assert ws.cell(row=80, column=2).value == 5000
+    assert ws.cell(row=132, column=2).value == 20.1
+    assert ws.cell(row=184, column=2).value == 15.2
 
 
-def test_without_static_data_unchanged(tmp_path):
-    """Without static data, output is identical to current behavior."""
-    out_no_static = tmp_path / "no_static.xlsx"
-    out_with_none = tmp_path / "with_none.xlsx"
-    report = _make_report()
+def test_sheet_names_do_not_depend_on_the_exercise(tmp_path):
+    wb = _write(tmp_path)
+    assert wb.sheetnames[:3] == ["Ripartizione", "Tabella", "Tabelle millesimali"]
 
-    write_xlsx(report, out_no_static)
-    write_xlsx(report, out_with_none, static_data=None)
 
-    wb1 = openpyxl.load_workbook(out_no_static)
-    wb2 = openpyxl.load_workbook(out_with_none)
+def test_exercise_start_readings_and_dates(tmp_path):
+    ws = _write(tmp_path).worksheets[0]
+    assert ws["C27"].value == 24000  # Riscaldamento start reading
+    assert ws["C30"].value == 22000  # ACS start reading
+    for cell in ("D27", "D30", "B178"):
+        assert ws[cell].value == datetime(2025, 12, 31)
 
-    # Same sheets
-    assert wb1.sheetnames == wb2.sheetnames
 
-    # Inquilini tenant column still empty
-    ws = wb1["Inquilini"]
-    assert ws["B2"].value is None
+def test_exercise_year_in_the_labels(tmp_path):
+    ws = _write(tmp_path).worksheets[0]
+    assert ws["A28"].value.endswith("RISCALDAMENTO FINE GESTIONE 26")
+    assert ws["A31"].value.endswith("ACS in ct FINE GESTIONE 26")
 
-    # Tabelle millesimali energy values still empty
-    ws = wb1["Tabelle millesimali"]
-    assert ws.cell(row=4, column=2).value is None  # subalterno
-    assert ws.cell(row=4, column=3).value is None  # heat energy
+
+def test_central_meter_final_reading_comes_from_the_report(tmp_path):
+    ws = _write(tmp_path).worksheets[0]
+    assert (ws["C28"].value, ws["D28"].value) == (29213, datetime(2026, 3, 2))
+    assert (ws["C31"].value, ws["D31"].value) == (31310, datetime(2026, 3, 2))
+
+
+def test_manual_final_reading_overrides_the_report(tmp_path):
+    static = _make_static_data()
+    static.central_meters[0] = CentralMeterStart(
+        "Riscaldamento", 24000, 29000, datetime(2026, 2, 27)
+    )
+
+    ws = _write(tmp_path, static).worksheets[0]
+
+    assert (ws["C28"].value, ws["D28"].value) == (29000, datetime(2026, 2, 27))
+    # The ACS meter has no manual reading: the report's stays
+    assert (ws["C31"].value, ws["D31"].value) == (31310, datetime(2026, 3, 2))
+
+
+def test_static_data_without_exercise_leaves_the_exercise_cells_empty(tmp_path):
+    ws = _write(tmp_path, StaticData()).worksheets[0]
+    for cell in ("C27", "D27", "C30", "D30", "B178"):
+        assert ws[cell].value is None
+    assert ws["A28"].value.endswith("FINE GESTIONE")
+
+
+def test_template_cells_hold_nothing_that_the_static_data_did_not_give(tmp_path):
+    """Previous readings of apartments the static data lacks stay empty."""
+    ws = _write(tmp_path, StaticData()).worksheets[0]
+    for row in (78, 80, 82, 95, 130, 147, 182, 199):
+        assert ws.cell(row=row, column=2).value is None

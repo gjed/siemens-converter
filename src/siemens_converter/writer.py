@@ -78,15 +78,24 @@ def _get_template_path() -> Path:
     return Path(str(files("siemens_converter").joinpath("template.xlsx")))
 
 
+# Central heat meters in the Ripartizione sheet: (start reading row, final reading row)
+_CENTRAL_METER_ROWS: dict[str, tuple[int, int]] = {
+    "Riscaldamento": (27, 28),
+    "Sanitario": (30, 31),
+}
+
+
 def write_xlsx(
     report: ParsedReport,
     output_path: Path,
-    static_data: StaticData | None = None,
+    static_data: StaticData,
 ) -> None:
-    """Write parsed report data into a copy of the template XLSX.
+    """Write parsed report data and static data into a copy of the template XLSX.
 
-    When *static_data* is provided, tenant names, millesimali, costs,
-    meter readings, and previous-period readings are also injected.
+    The static data supplies tenant and owner names, millesimali, costs, meter
+    readings, the start readings of the exercise and the central heat meters,
+    and the previous-period readings. A manual final reading of a central heat
+    meter in the static data replaces the one of the report.
     """
     template = _get_template_path()
     shutil.copy(str(template), str(output_path))
@@ -94,14 +103,21 @@ def write_xlsx(
     wb = openpyxl.load_workbook(output_path)
     ws = wb.worksheets[0]  # Ripartizione sheet
 
-    # Central meter readings, each dated from its own meter
-    for meter in report.central_meters:
-        if meter.description == "Riscaldamento":
-            ws["C28"] = meter.heat_energy_kwh
-            ws["D28"] = parse_readout_date(meter.readout_date)
-        elif meter.description == "Sanitario":
-            ws["C31"] = meter.heat_energy_kwh
-            ws["D31"] = parse_readout_date(meter.readout_date)
+    # Final readings of the central meters, each dated from its own meter
+    final_readings = {
+        meter.description: (
+            meter.heat_energy_kwh,
+            parse_readout_date(meter.readout_date),
+        )
+        for meter in report.central_meters
+    }
+    for meter in static_data.central_meters:
+        if meter.final_kwh is not None:
+            final_readings[meter.description] = (meter.final_kwh, meter.final_date)
+    for description, (_, final_row) in _CENTRAL_METER_ROWS.items():
+        if description in final_readings:
+            ws.cell(row=final_row, column=3, value=final_readings[description][0])
+            ws.cell(row=final_row, column=4, value=final_readings[description][1])
 
     # Section date headers: heat and cold water come from the heat meters
     heat_date = latest_readout_date(report.heat_allocators)
@@ -125,8 +141,7 @@ def write_xlsx(
         ws.cell(row=rows["water"], column=3, value=wm.water_volume_m3)
 
     # Inject static data into existing sheets (before Inquilini creation)
-    if static_data is not None:
-        _inject_static_data(wb, static_data)
+    _inject_static_data(wb, static_data)
 
     # Populate apartment names throughout the workbook
     _write_apartment_names(wb, report)
@@ -154,20 +169,23 @@ def _write_apartment_names(wb: openpyxl.Workbook, report: ParsedReport) -> None:
 def _write_inquilini_sheet(
     wb: openpyxl.Workbook,
     report: ParsedReport,
-    static_data: StaticData | None = None,
+    static_data: StaticData,
 ) -> None:
     """Create an 'Inquilini' sheet with apartment list and tenant names.
 
-    Column A: apartment description (from FC_report heat allocators)
-    Column B: tenant name/description (from static_data if available, else empty)
+    Column A: owner name from the static data when given, else the apartment
+    description of the FC_report heat allocators
+    Column B: tenant name/description from the static data
     """
     ws = wb.create_sheet("Inquilini")  # Appended after other sheets
 
-    # Build lookup: apartment_number -> inquilino string
+    # Build lookups: apartment_number -> proprietario / inquilino string
+    owner_lookup: dict[int, str] = {}
     tenant_lookup: dict[int, str] = {}
-    if static_data is not None:
-        for apt in static_data.apartments:
-            tenant_lookup[apt.apartment_number] = apt.inquilino
+    for apt in static_data.apartments:
+        if apt.proprietario:
+            owner_lookup[apt.apartment_number] = apt.proprietario
+        tenant_lookup[apt.apartment_number] = apt.inquilino
 
     # Header row
     ws.cell(row=1, column=1, value="Appartamento").font = _FONT_BOLD
@@ -183,12 +201,16 @@ def _write_inquilini_sheet(
     # One row per apartment from heat allocators (sorted by apt number)
     for i, ha in enumerate(report.heat_allocators):
         row = i + 2
-        c = ws.cell(row=row, column=1, value=ha.description)
+        c = ws.cell(
+            row=row,
+            column=1,
+            value=owner_lookup.get(ha.apartment_number, ha.description),
+        )
         c.font = _FONT
         c.alignment = _ALIGN_LEFT
         c.border = _THIN_BORDER
 
-        # Tenant name from static data, or empty for manual input
+        # Tenant name from static data
         tenant_name = tenant_lookup.get(ha.apartment_number, "")
         c2 = ws.cell(row=row, column=2, value=tenant_name)
         c2.font = _FONT
@@ -229,7 +251,9 @@ def _inject_static_data(wb: openpyxl.Workbook, static_data: StaticData) -> None:
     Populates:
     - Tabelle millesimali: subalterno (B), heat energy (C), water energy (E)
     - Tabella: costs (E3-E8), meter readings (F20-G22)
-    - Ripartizione: previous readings in column B of heat/water/AFS rows
+    - Ripartizione: previous readings in column B of heat/water/AFS rows, and the
+      exercise: start readings and dates of the central meters, start date of the
+      cold water section, year in the labels of the final readings
     """
     # -- Tabelle millesimali (rows 4-13 for apartments 1-10) --
     ws_mill = wb["Tabelle millesimali"]
@@ -264,6 +288,18 @@ def _inject_static_data(wb: openpyxl.Workbook, static_data: StaticData) -> None:
         ws_rip.cell(row=rows["heat"], column=2, value=prev.heat_kwh)
         ws_rip.cell(row=rows["water"], column=2, value=prev.water_m3)
         ws_rip.cell(row=rows["afs"], column=2, value=prev.cold_water_m3)
+
+    # -- Ripartizione: the exercise --
+    for meter in static_data.central_meters:
+        start_row, _ = _CENTRAL_METER_ROWS[meter.description]
+        ws_rip.cell(row=start_row, column=3, value=meter.initial_kwh)
+    if static_data.exercise is not None:
+        year_suffix = f"{static_data.exercise.year % 100:02d}"
+        for start_row, final_row in _CENTRAL_METER_ROWS.values():
+            ws_rip.cell(row=start_row, column=4, value=static_data.exercise.start_date)
+            label = ws_rip.cell(row=final_row, column=1)
+            label.value = f"{label.value} {year_suffix}"
+        ws_rip["B178"] = static_data.exercise.start_date
 
 
 # Columns visible in the original "File con dati necessari" (0-indexed)

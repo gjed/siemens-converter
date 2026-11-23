@@ -11,12 +11,18 @@ import dataclasses
 import os
 import shutil
 import subprocess
+from datetime import datetime
 from pathlib import Path
 
 import openpyxl
 import pytest
 
-from siemens_converter.models import MeterReading, StaticData
+from siemens_converter.models import (
+    CentralMeterStart,
+    CostItem,
+    MeterReading,
+    StaticData,
+)
 from siemens_converter.parser import parse_fc_report
 from siemens_converter.static_reader import parse_static_data
 from siemens_converter.writer import write_xlsx
@@ -40,6 +46,33 @@ def _with_meter_start(static: StaticData, start: float) -> StaticData:
     )
 
 
+def _with_cost(static: StaticData, label: str, amount: float) -> StaticData:
+    return dataclasses.replace(
+        static,
+        costs=[
+            CostItem(c.label, amount if c.label == label else c.amount)
+            for c in static.costs
+        ],
+    )
+
+
+def _with_manual_final_reading(static: StaticData) -> StaticData:
+    """Heating central meter: final reading and date typed in the static data."""
+    heating, acs = static.central_meters
+    return dataclasses.replace(
+        static,
+        central_meters=[
+            CentralMeterStart(
+                heating.description,
+                heating.initial_kwh,
+                heating.initial_kwh + 3500,
+                datetime(2026, 1, 9),
+            ),
+            acs,
+        ],
+    )
+
+
 def _static_variants() -> dict[str, StaticData]:
     base = parse_static_data(FIXTURES / "static_data_TEST.xlsx")
     return {
@@ -52,6 +85,9 @@ def _static_variants() -> dict[str, StaticData]:
                 for m in base.millesimali
             ],
         ),
+        # A cost that needs the sheet-scoped name costoafs
+        "water": _with_cost(_with_meter_start(base, 0), "Acqua condominio", 600.0),
+        "manual": _with_manual_final_reading(_with_meter_start(base, 0)),
     }
 
 
@@ -165,3 +201,58 @@ def test_fixed_cost_split_follows_millesimali(recalculated, variant):
     assert shares["E18"].value == pytest.approx(water / (heat + water))
     assert ws["C63"].value == pytest.approx(shares["C18"].value)
     assert ws["C64"].value == pytest.approx(shares["E18"].value)
+
+
+def test_central_meter_consumption_uses_the_start_readings_of_the_static_data(
+    recalculated,
+):
+    ws = recalculated["zero"].worksheets[0]
+    static = _static_variants()["zero"]
+    heating, acs = static.central_meters
+
+    assert ws["C27"].value == heating.initial_kwh
+    assert ws["C30"].value == acs.initial_kwh
+    # The fixture report reads 28000 kWh (heating) and 25000 kWh (ACS)
+    assert ws["C29"].value == 28000 - heating.initial_kwh
+    assert ws["C32"].value == 25000 - acs.initial_kwh
+
+
+def test_central_meter_consumption_uses_the_manual_final_reading(recalculated):
+    ws = recalculated["manual"].worksheets[0]
+    heating, acs = _static_variants()["manual"].central_meters
+
+    assert ws["C28"].value == heating.final_kwh
+    assert ws["D28"].value == heating.final_date
+    assert ws["C29"].value == 3500
+    # The ACS meter has no manual reading: the report's 25000 kWh stays
+    assert ws["C31"].value == 25000
+    assert ws["C32"].value == 25000 - acs.initial_kwh
+
+
+def test_apartment_start_readings_and_exercise_labels_come_from_the_static_data(
+    recalculated,
+):
+    ws = recalculated["zero"].worksheets[0]
+    first = _static_variants()["zero"].previous_readings[0]
+
+    assert ws["B78"].value == first.heat_kwh
+    assert ws["B130"].value == first.water_m3
+    assert ws["B182"].value == first.cold_water_m3
+    assert ws["D78"].value == ws["C78"].value - first.heat_kwh
+    assert ws["A28"].value.endswith("FINE GESTIONE 25")
+    assert ws["B178"].value == datetime(2024, 12, 31)
+
+
+def test_sheet_scoped_names_follow_the_renamed_sheets(recalculated):
+    """costoenegiaelettrica and costoafs point at the sheets under their new names."""
+    wb = recalculated["water"]
+    ws = wb.worksheets[0]
+
+    # costoenegiaelettrica (scoped to Ripartizione) is C26, the average cost in Tabella
+    assert ws["C26"].value == wb["Tabella"]["E12"].value
+    assert ws["C44"].value == ws["C26"].value
+    # costoafs (scoped to Tabella) spreads the 600 EUR of cold water over the volumes
+    assert wb["Tabella"]["E13"].value == pytest.approx(
+        600 / (ws["D200"].value + ws["E200"].value)
+    )
+    assert ws["F200"].value == pytest.approx(600)
