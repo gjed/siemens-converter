@@ -155,7 +155,7 @@ Le letture dei tre contatori principali: `ENERGIA ELETTRICA CT`, `GAS METANO CT`
 | `Lettura finale`   | La lettura del contatore a fine anno             |
 | `Consumo`          | Niente: è una formula                            |
 
-Se cambi il nome di un contatore, o ne togli uno, il programma si ferma con un errore.
+Se cambi il nome di un contatore, o ne togli uno, il programma si ferma con un errore. Si ferma anche se la lettura finale è più bassa di quella iniziale.
 
 ### Foglio `Letture_precedenti`
 
@@ -398,6 +398,15 @@ Una cella che deve contenere un numero è vuota. Il programma non la considera z
 1. Apri il file dei dati statici con Excel.
 1. Vai al foglio e alla cella indicati.
 1. Scrivi il numero. Se è davvero zero, scrivi `0`.
+1. Salva il file, chiudi Excel e ripeti la conversione.
+
+### `Errore nel file dati statici:` seguito da un nome, dal foglio `Contatori` e da `la lettura finale` e `è più bassa della lettura iniziale`
+
+Nel foglio `Contatori` la lettura finale di un contatore è più bassa della lettura iniziale, per esempio perché manca una cifra. Il messaggio dice il contatore, le due letture e la cella della lettura finale. Se le due letture sono uguali il programma le accetta.
+
+1. Apri il file dei dati statici con Excel.
+1. Vai al foglio `Contatori` e controlla le due letture del contatore indicato.
+1. Correggi la lettura sbagliata.
 1. Salva il file, chiudi Excel e ripeti la conversione.
 
 ### `Errore nel file dati statici:` seguito da un nome, dal foglio `Esercizio` e da `anno`, `data` o `lettura finale`
