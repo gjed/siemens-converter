@@ -31,6 +31,16 @@ _READINGS = {
 }
 
 
+# Smallest table the layout needs: metadata columns up to 7, device columns up to 26
+_META_COLUMNS = 8
+_DEVICE_COLUMNS = 27
+
+_CHOOSE_REPORT = (
+    "Scegliere il file FC_report esportato dal sistema Siemens "
+    "(il suo nome comincia con FC_report) e ripetere la conversione."
+)
+
+
 class ReportError(ValueError):
     """An FC report that must not become a workbook; the message is for the user."""
 
@@ -83,15 +93,17 @@ class _TableParser(HTMLParser):
 def parse_fc_report(path: str | Path) -> ParsedReport:
     """Parse a Siemens FC report file and return a structured ParsedReport."""
     path = Path(path)
-    html = path.read_text(encoding="utf-8")
-
-    parser = _TableParser()
-    parser.feed(html)
-    rows = parser.rows
+    rows = _read_rows(path)
 
     # Row 0: metadata headers (ignored)
     # Row 1: metadata values
     meta = rows[1]
+    try:
+        total_wired = int(meta[5])
+    except ValueError as exc:
+        raise _not_a_report(
+            path, "il numero dei dispositivi collegati non è un numero"
+        ) from exc
     header = ReportHeader(
         filename=meta[0],
         report_date=meta[1],
@@ -99,7 +111,7 @@ def parse_fc_report(path: str | Path) -> ParsedReport:
         reference=meta[3],
         serial=meta[7],
         firmware=meta[4],
-        total_wired=int(meta[5]),
+        total_wired=total_wired,
     )
 
     # Row 2: blank separator
@@ -114,7 +126,12 @@ def parse_fc_report(path: str | Path) -> ParsedReport:
         name_device = row[3].strip()
         device_description = row[4].strip()
         device_detail = row[5].strip()
-        serial_number = int(row[2])
+        try:
+            serial_number = int(row[2])
+        except ValueError as exc:
+            raise _not_a_report(
+                path, f"il numero di serie «{row[2]}» di un dispositivo non è un numero"
+            ) from exc
         readout_date = row[9]
         status = row[11].strip()
 
@@ -134,7 +151,7 @@ def parse_fc_report(path: str | Path) -> ParsedReport:
             water_meters.append(
                 WaterMeter(
                     description=device_description,
-                    apartment_number=extract_apartment_number(device_description),
+                    apartment_number=_apartment(device_description, _WATER),
                     water_volume_m3=_reading(
                         row, 24, parse_decimal, _WATER, bad_readings
                     ),
@@ -148,7 +165,7 @@ def parse_fc_report(path: str | Path) -> ParsedReport:
             heat_allocators.append(
                 HeatAllocator(
                     description=device_description,
-                    apartment_number=extract_apartment_number(device_description),
+                    apartment_number=_apartment(device_description, _HEAT),
                     heat_energy_mwh=_reading(
                         row, 15, parse_decimal, _HEAT, bad_readings
                     ),
@@ -179,7 +196,7 @@ def parse_fc_report(path: str | Path) -> ParsedReport:
         raise ReportError(_refusal(missing, bad_readings))
 
     # Preserve raw data for the Dati Report sheet
-    column_headers = rows[3] if len(rows) > 3 else []
+    column_headers = rows[3]
     # Sort raw rows: water meters first, then heat allocators, then central
     water_rows = [r for r in rows[4:] if r[5].strip() == "Acqua calda"]
     heat_rows = [r for r in rows[4:] if r[5].strip() == "Contacalorie"]
@@ -206,6 +223,46 @@ def parse_fc_report(path: str | Path) -> ParsedReport:
     )
     report.warnings = _warnings(report)
     return report
+
+
+def _not_a_report(path: Path, why: str) -> ReportError:
+    return ReportError(
+        f"il file «{path.name}» non è un report FC: {why}. {_CHOOSE_REPORT}"
+    )
+
+
+def _read_rows(path: Path) -> list[list[str]]:
+    """Read the rows of the table of *path*, refusing a file that is not an FC report."""
+    try:
+        html = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise _not_a_report(path, "non contiene testo leggibile") from exc
+
+    parser = _TableParser()
+    parser.feed(html)
+    rows = parser.rows
+    if not rows:
+        raise _not_a_report(path, "non contiene nessuna tabella")
+    if len(rows) < 4:
+        raise _not_a_report(
+            path, "la tabella è troppo corta, mancano le righe dei dispositivi"
+        )
+    if len(rows[1]) < _META_COLUMNS or any(len(r) < _DEVICE_COLUMNS for r in rows[3:]):
+        raise _not_a_report(path, "la tabella ha meno colonne del previsto")
+    return rows
+
+
+def _apartment(description: str, kind: tuple[str, str]) -> int:
+    """Apartment number of a device; a description without one is refused."""
+    try:
+        return extract_apartment_number(description)
+    except ValueError as exc:
+        raise ReportError(
+            f"{kind[0]} «{description}»: nella descrizione manca il numero "
+            "dell'appartamento, che deve comparire come «App, 01». Far correggere "
+            "la descrizione nel sistema Siemens, scaricare di nuovo il report FC "
+            "e ripetere la conversione."
+        ) from exc
 
 
 def _reading(

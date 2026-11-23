@@ -133,5 +133,8 @@ def extract_apartment_number(description: str) -> int:
     """Extract apartment number from strings like 'App, 01 Rossi Mario' or 'App, 10 Verdi'."""
     match = re.search(r"App[.,]\s*(\d{1,2})", description)
     if match is None:
-        raise ValueError(f"Cannot extract apartment number from: {description!r}")
+        raise ValueError(
+            f"nella descrizione «{description}» manca il numero dell'appartamento, "
+            "che deve comparire come «App, 01»"
+        )
     return int(match.group(1))
