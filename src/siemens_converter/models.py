@@ -105,12 +105,34 @@ class PreviousReading:
 
 
 @dataclass
+class ExerciseInfo:
+    year: int
+    start_date: datetime
+
+
+@dataclass
+class CentralMeterStart:
+    """Start reading of a central heat meter and its optional manual final reading.
+
+    *description* is the one the FC_report gives the meter: Riscaldamento or Sanitario.
+    A manual final reading comes with its date, and replaces the report's.
+    """
+
+    description: str
+    initial_kwh: float
+    final_kwh: float | None = None
+    final_date: datetime | None = None
+
+
+@dataclass
 class StaticData:
     apartments: list[ApartmentInfo] = field(default_factory=list)
     millesimali: list[Millesimali] = field(default_factory=list)
     costs: list[CostItem] = field(default_factory=list)
     meters: list[MeterReading] = field(default_factory=list)
     previous_readings: list[PreviousReading] = field(default_factory=list)
+    exercise: ExerciseInfo | None = None
+    central_meters: list[CentralMeterStart] = field(default_factory=list)
 
 
 def parse_readout_date(text: str) -> datetime | None:

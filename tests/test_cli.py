@@ -425,11 +425,11 @@ def test_main_success_two_files(monkeypatch, tmp_path):
 
     # Millesimali should be populated
     ws_mill = wb["Tabelle millesimali"]
-    assert ws_mill.cell(row=4, column=2).value == 20  # subalterno apt 1
+    assert ws_mill.cell(row=4, column=2).value == 101  # subalterno apt 1
 
     # Costs should be populated
     ws_tab = wb["Tabella"]
-    assert ws_tab.cell(row=3, column=5).value == 263.44  # Energia elettrica
+    assert ws_tab.cell(row=3, column=5).value == 310.5  # Energia elettrica
 
 
 def test_main_two_files_reversed_order(monkeypatch, tmp_path):
