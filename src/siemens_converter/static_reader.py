@@ -22,7 +22,7 @@ REQUIRED_SHEETS = frozenset(
     {"Inquilini", "Millesimali", "Costi", "Contatori", "Letture_precedenti"}
 )
 
-# Labels expected in the Costi sheet (order matches Tabella_2026 E3-E8)
+# Labels expected in the Costi sheet (order matches Tabella E3-E8)
 COST_LABELS = (
     "Energia elettrica",
     "Gas metano",

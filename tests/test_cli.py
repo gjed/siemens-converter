@@ -428,7 +428,7 @@ def test_main_success_two_files(monkeypatch, tmp_path):
     assert ws_mill.cell(row=4, column=2).value == 20  # subalterno apt 1
 
     # Costs should be populated
-    ws_tab = wb["Tabella_2026"]
+    ws_tab = wb["Tabella"]
     assert ws_tab.cell(row=3, column=5).value == 263.44  # Energia elettrica
 
 
