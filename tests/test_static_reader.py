@@ -7,9 +7,38 @@ from pathlib import Path
 import openpyxl
 import pytest
 
-from siemens_converter.static_reader import parse_static_data
+from siemens_converter.static_reader import StaticDataError, parse_static_data
 
 FIXTURE = Path(__file__).parent / "fixtures" / "static_data_TEST.xlsx"
+REPORT = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
+
+TEMPLATE_ADVICE = (
+    "Scegliere il file dei dati statici, compilato a partire da "
+    "static_data_template.xlsx (si scarica dalla pagina dell'ultima versione: "
+    "https://github.com/gjed/siemens-converter/releases/latest), "
+    "e ripetere la conversione."
+)
+ACCEPTED_LABELS = (
+    "«Energia elettrica», «Gas metano», «Acqua condominio», "
+    "«Conduzione e manutenzione», «Contabilizzazione», "
+    "«Acqua sanitaria manutenzione»"
+)
+
+
+def refusal(path: Path) -> str:
+    with pytest.raises(StaticDataError) as excinfo:
+        parse_static_data(path)
+    return str(excinfo.value)
+
+
+def edited(tmp_path: Path, sheet: str, **cells) -> Path:
+    """Copy the fixture into tmp_path with the given cells of *sheet* changed."""
+    wb = openpyxl.load_workbook(FIXTURE)
+    for cell, value in cells.items():
+        wb[sheet][cell] = value
+    path = tmp_path / "dati_2026.xlsx"
+    wb.save(path)
+    return path
 
 
 def test_parse_valid_file():
@@ -71,15 +100,50 @@ def test_previous_readings_populated():
     assert pr1.cold_water_m3 == 10.2
 
 
-def test_missing_sheet_raises_error(tmp_path: Path):
-    """File with a required sheet removed should raise ValueError."""
+def test_file_that_is_not_a_workbook(tmp_path: Path):
+    path = tmp_path / "dati_2026.xlsx"
+    path.write_bytes(REPORT.read_bytes())
+
+    assert refusal(path) == (
+        "«dati_2026.xlsx» non è un file dei dati statici: non si apre come file "
+        "Excel (.xlsx). " + TEMPLATE_ADVICE
+    )
+
+
+def test_file_with_another_extension(tmp_path: Path):
+    path = tmp_path / "FC_report.xls"
+    path.write_bytes(REPORT.read_bytes())
+
+    assert refusal(path).startswith(
+        "«FC_report.xls» non è un file dei dati statici: non si apre come file Excel"
+    )
+
+
+def test_missing_sheet(tmp_path: Path):
     wb = openpyxl.load_workbook(FIXTURE)
     del wb["Contatori"]
-    bad_path = tmp_path / "missing_sheet.xlsx"
-    wb.save(bad_path)
+    path = tmp_path / "missing_sheet.xlsx"
+    wb.save(path)
 
-    with pytest.raises(ValueError, match="Contatori"):
-        parse_static_data(bad_path)
+    assert refusal(path) == (
+        "«missing_sheet.xlsx» non è un file dei dati statici: manca il foglio "
+        "«Contatori». Se il file è quello giusto, controllare che nessun foglio "
+        "sia stato rinominato o eliminato. " + TEMPLATE_ADVICE
+    )
+
+
+def test_missing_sheets(tmp_path: Path):
+    wb = openpyxl.load_workbook(FIXTURE)
+    wb["Costi"].title = "Spese"
+    del wb["Inquilini"]
+    path = tmp_path / "missing_sheets.xlsx"
+    wb.save(path)
+
+    assert refusal(path) == (
+        "«missing_sheets.xlsx» non è un file dei dati statici: mancano i fogli "
+        "«Costi», «Inquilini». Se il file è quello giusto, controllare che nessun "
+        "foglio sia stato rinominato o eliminato. " + TEMPLATE_ADVICE
+    )
 
 
 def test_missing_cost_label_defaults_to_zero(tmp_path: Path):
@@ -128,12 +192,71 @@ def test_cost_label_case_and_whitespace_insensitive(tmp_path: Path):
     assert cost_dict["Gas metano"] == 2141.0
 
 
-def test_unknown_cost_label_raises(tmp_path: Path):
-    wb = openpyxl.load_workbook(FIXTURE)
-    ws = wb["Costi"]
-    ws["A4"] = "Gas metanno"
-    patched = tmp_path / "unknown_cost.xlsx"
-    wb.save(patched)
+def test_unknown_cost_label(tmp_path: Path):
+    path = edited(tmp_path, "Costi", A4="  Gas metanno ")
 
-    with pytest.raises(ValueError, match="gas metanno"):
-        parse_static_data(patched)
+    assert refusal(path) == (
+        "«dati_2026.xlsx», foglio «Costi»: queste voci di spesa non sono tra quelle "
+        "accettate:\n"
+        "- «Gas metanno» (cella A4)\n\n"
+        f"Le voci accettate sono: {ACCEPTED_LABELS}. Scrivere ogni voce come nel "
+        "modello, oppure eliminare la riga, e ripetere la conversione."
+    )
+
+
+def test_every_unknown_cost_label_is_listed(tmp_path: Path):
+    path = edited(tmp_path, "Costi", A3="Luce", A7="Pulizie")
+
+    message = refusal(path)
+
+    assert "\n- «Luce» (cella A3)\n- «Pulizie» (cella A7)\n" in message
+
+
+@pytest.mark.parametrize(
+    ("sheet", "cell", "value", "kind"),
+    [
+        ("Costi", "B4", "abc", "un numero"),
+        ("Millesimali", "C4", "1.344,03 kWh", "un numero"),
+        ("Millesimali", "E5", "n/d", "un numero"),
+        ("Millesimali", "B6", "terzo", "un numero intero"),
+        ("Contatori", "C3", "zero", "un numero"),
+        ("Contatori", "D5", "680 mc", "un numero"),
+        ("Letture_precedenti", "B3", "quattro", "un numero intero"),
+        ("Letture_precedenti", "C4", "30,1 m3", "un numero"),
+        ("Letture_precedenti", "D5", "?", "un numero"),
+    ],
+)
+def test_value_that_is_not_a_number(tmp_path: Path, sheet, cell, value, kind):
+    path = edited(tmp_path, sheet, **{cell: value})
+
+    assert refusal(path) == (
+        f"«dati_2026.xlsx», foglio «{sheet}», cella {cell}: il valore «{value}» "
+        f"non è {kind}. Scrivere solo il numero, senza unità di misura e senza "
+        "simboli, e ripetere la conversione."
+    )
+
+
+def test_blank_number_cells_still_read_as_zero(tmp_path: Path):
+    path = edited(
+        tmp_path,
+        "Letture_precedenti",
+        B3=None,
+        C3=None,
+        D3=None,
+    )
+    wb = openpyxl.load_workbook(path)
+    wb["Costi"]["B4"] = None
+    wb["Contatori"]["D3"] = None
+    wb["Millesimali"]["C4"] = None
+    wb.save(path)
+
+    sd = parse_static_data(path)
+
+    assert (sd.previous_readings[0].heat_kwh, sd.previous_readings[0].water_m3) == (
+        0,
+        0.0,
+    )
+    assert sd.previous_readings[0].cold_water_m3 == 0.0
+    assert {c.label: c.amount for c in sd.costs}["Gas metano"] == 0.0
+    assert sd.meters[0].final == 0.0
+    assert sd.millesimali[0].heat_energy_kwh == 0.0
