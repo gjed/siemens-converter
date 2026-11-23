@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from dataclasses import replace
 from html.parser import HTMLParser
 from pathlib import Path
 
 from siemens_converter.models import (
     CentralMeter,
+    CentralMeterStart,
     HeatAllocator,
     ParsedReport,
     ReportHeader,
@@ -223,6 +225,28 @@ def parse_fc_report(path: str | Path) -> ParsedReport:
     )
     report.warnings = _warnings(report)
     return report
+
+
+def warnings_with_manual_readings(
+    report: ParsedReport, manual: Iterable[CentralMeterStart]
+) -> list[str]:
+    """The warnings of *report*, judging a central meter by its manual final reading.
+
+    A central meter whose final reading and date come from the static data is
+    dated, and its status taken as Ok, by that reading instead of the report's.
+    """
+    dated = {m.description: m.final_date for m in manual if m.final_kwh is not None}
+    central = [
+        replace(
+            m,
+            readout_date=dated[m.description].strftime("%Y/%m/%d"),
+            communication_status="Ok",
+        )
+        if dated.get(m.description) is not None
+        else m
+        for m in report.central_meters
+    ]
+    return _warnings(replace(report, central_meters=central))
 
 
 def _not_a_report(path: Path, why: str) -> ReportError:

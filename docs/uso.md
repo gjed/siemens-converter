@@ -183,7 +183,7 @@ L'anno, la data di inizio e le letture dei due contatori di calore della central
 
 L'anno compare nelle etichette `FINE GESTIONE` del primo foglio. La data di inizio compare accanto alle letture iniziali.
 
-I contatori di calore della centrale termica spesso sono letti qualche giorno prima di quelli degli appartamenti. Se vuoi usare una lettura diversa da quella del file FC_report, scrivi la lettura finale e la sua data nelle colonne facoltative: servono tutte e due. Se le lasci vuote, il programma usa la lettura del file FC_report.
+I contatori di calore della centrale termica spesso sono letti qualche giorno prima di quelli degli appartamenti. Se vuoi usare una lettura diversa da quella del file FC_report, scrivi la lettura finale e la sua data nelle colonne facoltative: servono tutte e due. Se le lasci vuote, il programma usa la lettura del file FC_report. Gli avvisi sulla data di lettura e sullo stato del contatore centrale riguardano la lettura che il programma usa: se hai scritto la tua, valgono la tua data e il suo valore, non quelli del file FC_report.
 
 ## Problemi e soluzioni
 

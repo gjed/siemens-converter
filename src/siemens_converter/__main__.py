@@ -171,7 +171,11 @@ def main() -> None:
                 "spostato o rinominato e ripetere la conversione."
             )
 
-    from siemens_converter.parser import ReportError, parse_fc_report
+    from siemens_converter.parser import (
+        ReportError,
+        parse_fc_report,
+        warnings_with_manual_readings,
+    )
     from siemens_converter.static_reader import StaticDataError, parse_static_data
     from siemens_converter.writer import write_xlsx
 
@@ -189,6 +193,7 @@ def main() -> None:
         static_data = parse_static_data(static_path)
     except StaticDataError as exc:
         _fail(f"Errore nel file dati statici: {exc}")
+    report.warnings = warnings_with_manual_readings(report, static_data.central_meters)
 
     date_safe = report.header.report_date.replace("/", "-")
     out_name = f"Riparto_{report.header.serial}_{date_safe}.xlsx"
