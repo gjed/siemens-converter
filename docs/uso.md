@@ -6,7 +6,7 @@ Il convertitore legge il file delle letture esportato dal sistema Siemens (il fi
 
 - **Il programma.** È un file `.exe` con un nome simile a `siemens-converter-windows-v0.2.0.exe`. Non va installato.
 - **Il file FC_report.** È il file `.xls` esportato dal sistema Siemens. Il suo nome comincia con `FC_report`.
-- **Il file dei dati statici** (facoltativo). È un file Excel `.xlsx` che compili tu con inquilini, millesimi, costi e letture precedenti. Come prepararlo è spiegato in [Il file dei dati statici](#il-file-dei-dati-statici).
+- **Il file dei dati statici.** È un file Excel `.xlsx` che compili tu con l'anno dell'esercizio, inquilini, millesimi, costi e letture di inizio esercizio. Serve sempre: senza, il programma non converte. Come prepararlo è spiegato in [Il file dei dati statici](#il-file-dei-dati-statici).
 
 ## Scaricare il programma
 
@@ -15,16 +15,6 @@ Il convertitore legge il file delle letture esportato dal sistema Siemens (il fi
 1. Salva il file in una cartella che ritrovi facilmente, per esempio il Desktop.
 
 ## Convertire trascinando i file
-
-### Solo il file FC_report
-
-1. Apri la cartella che contiene il file FC_report.
-1. Trascina il file FC_report sopra l'icona del programma.
-1. Rilascia il file.
-1. Aspetta la finestra con la scritta `Fatto!` e il nome del file creato.
-1. Premi `OK`.
-
-Senza il file dei dati statici il risultato è incompleto. Leggi [Se non usi il file dei dati statici](#se-non-usi-il-file-dei-dati-statici).
 
 ### Il file FC_report insieme al file dei dati statici
 
@@ -36,7 +26,7 @@ Senza il file dei dati statici il risultato è incompleto. Leggi [Se non usi il 
 1. Aspetta la finestra con la scritta `Fatto!` e il nome del file creato.
 1. Premi `OK`.
 
-Non importa quale file selezioni per primo. Il programma li riconosce dall'estensione: il file `.xlsx` è quello dei dati statici, l'altro è il file FC_report. Se i due file sono entrambi `.xlsx` o nessuno dei due lo è, il programma lo dice e non converte nulla.
+Non importa quale file selezioni per primo. Il programma li riconosce dall'estensione: il file `.xlsx` è quello dei dati statici, l'altro è il file FC_report. Servono sempre tutti e due. Se ne trascini uno solo, o se i due file sono entrambi `.xlsx` o nessuno dei due lo è, il programma lo dice e non converte nulla.
 
 Trascina al massimo due file. Il programma ignora quelli in più.
 
@@ -45,12 +35,12 @@ Trascina al massimo due file. Il programma ignora quelli in più.
 1. Fai doppio clic sull'icona del programma.
 1. Si apre la finestra `Seleziona FC_report (.xls)`. Clicca sul file FC_report.
 1. Premi `Apri`.
-1. Si apre la finestra `Seleziona dati statici (.xlsx) — o Annulla per saltare`. Clicca sul file dei dati statici. Se non hai il file dei dati statici, premi `Annulla` e salta il prossimo punto.
+1. Si apre la finestra `Seleziona dati statici (.xlsx)`. Clicca sul file dei dati statici.
 1. Premi `Apri`.
 1. Aspetta la finestra con la scritta `Fatto!` e il nome del file creato.
 1. Premi `OK`.
 
-Se premi `Annulla` nella prima finestra, il programma si chiude senza creare nulla.
+Se premi `Annulla` nella prima finestra, il programma si chiude senza creare nulla. Se premi `Annulla` nella seconda, il programma dice che manca il file dei dati statici e non crea nulla.
 
 ## Dove trovi il risultato
 
@@ -66,41 +56,30 @@ Se il programma trova qualcosa da controllare, crea comunque il file. Gli avvisi
 
 Il file ha cinque fogli.
 
-| Foglio                          | Contenuto                                                                                                              |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `Ripartizione_Termo 02.03.2026` | Il calcolo della ripartizione: letture iniziali e finali, consumi e costi di riscaldamento, acqua calda e acqua fredda |
-| `Tabella_2026`                  | Le spese dell'anno e le letture dei contatori principali di energia elettrica, gas e acqua                             |
-| `Tabelle millesimali`           | Subalterno, energia utile e millesimi di riscaldamento e di acqua calda di ogni appartamento                           |
-| `Inquilini`                     | L'elenco degli appartamenti con il nome dell'inquilino                                                                 |
-| `Dati Report`                   | Tutti i dati del file FC_report in una tabella con i filtri                                                            |
+| Foglio                | Contenuto                                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `Ripartizione`        | Il calcolo della ripartizione: letture iniziali e finali, consumi e costi di riscaldamento, acqua calda e acqua fredda |
+| `Tabella`             | Le spese dell'anno e le letture dei contatori principali di energia elettrica, gas e acqua                             |
+| `Tabelle millesimali` | Subalterno, energia utile e millesimi di riscaldamento e di acqua calda di ogni appartamento                           |
+| `Inquilini`           | L'elenco degli appartamenti con il nome del proprietario e dell'inquilino                                              |
+| `Dati Report`         | Tutti i dati del file FC_report in una tabella con i filtri                                                            |
+
+I fogli `Ripartizione` e `Tabella` hanno sempre questi nomi, qualunque sia l'anno.
 
 Il programma scrive nel file questi dati:
 
 - dal file FC_report: le letture finali dei due contatori di calore della centrale termica, le letture finali di riscaldamento, acqua calda e acqua fredda di ogni appartamento, la data di lettura e i nomi degli appartamenti;
-- dal file dei dati statici: i nomi degli inquilini, i subalterni e l'energia utile, le spese dell'anno, le letture dei contatori principali e le letture precedenti di ogni appartamento.
+- dal file dei dati statici: l'anno e la data di inizio dell'esercizio, le letture di inizio esercizio dei due contatori di calore della centrale termica, i nomi dei proprietari e degli inquilini, i subalterni e l'energia utile, le spese dell'anno, le letture dei contatori principali e le letture precedenti di ogni appartamento. Se nel file dei dati statici scrivi la lettura finale di un contatore di calore della centrale termica, con la sua data, il programma usa quella al posto della lettura del file FC_report.
 
 Quasi tutti i calcoli sono formule di Excel già presenti nel file: se correggi un dato a mano, i risultati si aggiornano. Fanno eccezione le celle elencate qui sotto.
 
-### Dati da controllare a mano
+### Dati da scrivere a mano
 
-Il programma non aggiorna questi dati. Controllali ogni volta nel primo foglio:
-
-- le letture di inizio esercizio dei due contatori di calore della centrale termica, nelle celle `C27` e `C30`;
-- le date di inizio esercizio, nelle celle `D27`, `D30` e `B178`;
-- le quote delle spese fisse di riscaldamento e di acqua calda, nelle celle `C63` e `C64`. Sono numeri fissi, non formule. `C63` deve contenere lo stesso numero della cella `C18` del foglio `Tabelle millesimali`, e `C64` lo stesso numero della cella `E18` di quel foglio. Se sono diversi, scrivi in `C63` e `C64` i numeri che leggi in `C18` e `E18`.
-
-### Se non usi il file dei dati statici
-
-Il file creato contiene solo le letture Siemens. Mancano le spese e i millesimi, quindi molte celle mostrano `#DIV/0!`. Le letture precedenti degli appartamenti restano quelle già presenti nel modello e possono non essere le tue.
-
-Hai due possibilità:
-
-- prepara il file dei dati statici e ripeti la conversione con i due file;
-- scrivi i dati mancanti a mano nel file creato.
+Il programma non conosce i giorni di permanenza degli inquilini. Se un inquilino è entrato in corso d'anno, scrivili a mano nel primo foglio, nelle righe da 257 a 273: i giorni di permanenza dell'inquilino nella colonna `N` e una nota, per esempio la data di entrata, nella colonna `K`. Se nessun inquilino è entrato in corso d'anno, non scrivere nulla.
 
 ## Il file dei dati statici
 
-Il file dei dati statici contiene i dati che il sistema Siemens non conosce. Lo compili una volta e lo aggiorni ogni anno.
+Il file dei dati statici contiene i dati che il sistema Siemens non conosce. Lo prepari ogni anno: le letture di inizio esercizio sono le letture finali dell'anno prima.
 
 ### Scaricare il modello
 
@@ -108,7 +87,7 @@ Il file dei dati statici contiene i dati che il sistema Siemens non conosce. Lo 
 1. Nell'elenco `Assets` clicca su `static_data_template.xlsx`.
 1. Salva il file con un nome a tua scelta, per esempio `dati_statici_2026.xlsx`. Il nome deve finire con `.xlsx`.
 1. Apri il file con Excel.
-1. Compila i cinque fogli come spiegato qui sotto.
+1. Compila i sei fogli come spiegato qui sotto.
 1. Salva il file.
 1. Chiudi Excel.
 
@@ -119,21 +98,22 @@ Il file dei dati statici contiene i dati che il sistema Siemens non conosce. Lo 
 - Non toccare le prime due righe di ogni foglio: contengono il titolo e le intestazioni.
 - Non cambiare i numeri degli appartamenti nella colonna `App.`.
 - Nelle celle dei numeri scrivi solo il numero, senza unità di misura e senza il simbolo `€`.
-- Non lasciare vuota una cella che deve contenere un numero. Il programma legge una cella vuota come zero e non ti avvisa. Se un valore è davvero zero, scrivi `0`.
-- Non lasciare righe vuote in mezzo a una tabella. Il programma può smettere di leggere alla prima riga vuota.
+- Non lasciare vuota una cella che deve contenere un numero. Il programma si ferma e ti dice quale cella manca. Se un valore è davvero zero, scrivi `0`.
+- Scrivi ogni appartamento una sola volta, da 1 a 10, in ogni foglio che ha la colonna `App.`. Non cancellare righe e non scrivere lo stesso numero in due righe.
+- Non scrivere note, totali o altre righe sotto o in mezzo alle tabelle: oltre alle righe dei dati e alla riga `TOTALE`, il programma non accetta altro e si ferma.
 - Non scrivere nelle celle che contengono già una formula.
 
 ### Foglio `Inquilini`
 
 Una riga per ogni appartamento.
 
-| Colonna                    | Cosa scrivere                                                                             |
-| -------------------------- | ----------------------------------------------------------------------------------------- |
-| `App.`                     | Il numero dell'appartamento, da 1 a 10. È già compilato                                   |
-| `Proprietario / Condomino` | Il nome del proprietario. Oggi questo dato non viene riportato nel file creato            |
-| `Inquilino / Conduttore`   | Il nome dell'inquilino. Compare nel foglio `Inquilini` e accanto alle letture del riparto |
+| Colonna                    | Cosa scrivere                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------ |
+| `App.`                     | Il numero dell'appartamento, da 1 a 10. È già compilato                                    |
+| `Proprietario / Condomino` | Il nome del proprietario. Compare nella colonna `A` del foglio `Inquilini` del file creato |
+| `Inquilino / Conduttore`   | Il nome dell'inquilino. Compare nel foglio `Inquilini` e accanto alle letture del riparto  |
 
-I nomi degli appartamenti nel file creato non vengono da questo foglio: sono le descrizioni scritte nel file FC_report.
+Se non scrivi il proprietario di un appartamento, nel file creato compare la descrizione scritta nel file FC_report, per esempio `App, 01 Rossi Mario`.
 
 ### Foglio `Millesimali`
 
@@ -148,7 +128,7 @@ Una riga per ogni appartamento.
 | `Energia utile ACS`           | L'energia utile per l'acqua calda sanitaria, in kWh |
 | `Millesimi ACS`               | Niente: è una formula                               |
 
-Anche la riga `TOTALE` contiene formule: non modificarla.
+Le righe dei dati cominciano alla riga 5, sotto le unità di misura e la riga `TOTALE`, che contiene formule: non modificarla.
 
 ### Foglio `Costi`
 
@@ -161,7 +141,7 @@ Le sei spese dell'anno. Scrivi l'importo in euro nella colonna `€ / anno`, acc
 - `Contabilizzazione`
 - `Acqua sanitaria manutenzione`
 
-Non modificare e non aggiungere voci nella colonna `Voce di spesa`: il programma accetta solo queste sei e si ferma con un errore se ne trova un'altra. La riga `TOTALE` è una formula.
+Non modificare e non aggiungere voci nella colonna `Voce di spesa`: il programma accetta solo queste sei, ognuna una volta, e si ferma con un errore se ne trova un'altra o se ne manca una. Se una spesa è zero, scrivi `0`. La riga `TOTALE` è una formula.
 
 ### Foglio `Contatori`
 
@@ -175,7 +155,7 @@ Le letture dei tre contatori principali: `ENERGIA ELETTRICA CT`, `GAS METANO CT`
 | `Lettura finale`   | La lettura del contatore a fine anno             |
 | `Consumo`          | Niente: è una formula                            |
 
-Se cambi il nome di un contatore, il programma ignora quella riga senza avvisarti.
+Se cambi il nome di un contatore, o ne togli uno, il programma si ferma con un errore.
 
 ### Foglio `Letture_precedenti`
 
@@ -188,9 +168,34 @@ Una riga per ogni appartamento, con le letture finali dell'anno precedente. Sono
 | `ACS lettura prec.`           | La lettura precedente dell'acqua calda sanitaria, in metri cubi  |
 | `AFS lettura prec.`           | La lettura precedente dell'acqua fredda sanitaria, in metri cubi |
 
+Il programma controlla che le letture finali del file FC_report non siano più basse di queste. Se lo sono, il file dei dati statici è di un altro anno e il programma si ferma.
+
+### Foglio `Esercizio`
+
+L'anno, la data di inizio e le letture dei due contatori di calore della centrale termica.
+
+| Riga                                  | Colonna `Valore`                                         | Colonne facoltative                      |
+| ------------------------------------- | -------------------------------------------------------- | ---------------------------------------- |
+| `Anno dell'esercizio`                 | L'anno con quattro cifre, per esempio `2026`             | Niente                                   |
+| `Data di inizio dell'esercizio`       | La data delle letture iniziali, per esempio `31/12/2025` | Niente                                   |
+| `Contacalorie centrale RISCALDAMENTO` | La lettura iniziale, in kWh                              | `Lettura finale` e `Data lettura finale` |
+| `Contacalorie centrale ACS`           | La lettura iniziale, in kWh                              | `Lettura finale` e `Data lettura finale` |
+
+L'anno compare nelle etichette `FINE GESTIONE` del primo foglio. La data di inizio compare accanto alle letture iniziali.
+
+I contatori di calore della centrale termica spesso sono letti qualche giorno prima di quelli degli appartamenti. Se vuoi usare una lettura diversa da quella del file FC_report, scrivi la lettura finale e la sua data nelle colonne facoltative: servono tutte e due. Se le lasci vuote, il programma usa la lettura del file FC_report.
+
 ## Problemi e soluzioni
 
 Quando qualcosa non va, il programma mostra una finestra con un messaggio scritto in italiano. Il messaggio dice che cosa non va e che cosa fare. Cerca qui sotto l'inizio del testo che vedi.
+
+### `Manca il file dei dati statici: è stato scelto solo` seguito dal nome di un file
+
+Hai scelto solo il file FC_report, oppure hai premuto `Annulla` nella seconda finestra del doppio clic. Il programma non converte senza il file dei dati statici, perché senza di esso il riparto sarebbe sbagliato.
+
+1. Prepara il file dei dati statici, come spiegato in [Il file dei dati statici](#il-file-dei-dati-statici).
+1. Scegli il file FC_report insieme al file dei dati statici, come spiegato in [Il file FC_report insieme al file dei dati statici](#il-file-fc_report-insieme-al-file-dei-dati-statici).
+1. Ripeti la conversione.
 
 ### `Manca il file FC_report: è stato scelto solo` seguito dal nome di un file
 
@@ -212,8 +217,7 @@ Hai scelto due file che finiscono con `.xlsx`. Il programma ne accetta uno solo,
 
 Hai scelto due file che non finiscono con `.xlsx`. Il programma accetta un solo file FC_report e vuole che il file dei dati statici sia un file `.xlsx`.
 
-1. Se vuoi convertire senza dati statici, scegli solo il file FC_report.
-1. Se vuoi usare i dati statici, scegli il file FC_report e il file dei dati statici. Il nome del file dei dati statici deve finire con `.xlsx`.
+1. Scegli il file FC_report e il file dei dati statici. Il nome del file dei dati statici deve finire con `.xlsx`.
 1. Ripeti la conversione.
 
 ### `Il file FC_report` seguito da un nome e da `non esiste`
@@ -320,18 +324,62 @@ Il file scelto come file dei dati statici non è un file dei dati statici. Il me
 
 1. Controlla di aver scelto il file giusto.
 1. Apri il file con Excel.
-1. Controlla che i fogli si chiamino esattamente `Inquilini`, `Millesimali`, `Costi`, `Contatori` e `Letture_precedenti`.
-1. Se un foglio manca, scarica di nuovo il modello come spiegato in [Scaricare il modello](#scaricare-il-modello) e ricopia i tuoi dati.
+1. Controlla che i fogli si chiamino esattamente `Inquilini`, `Millesimali`, `Costi`, `Contatori`, `Letture_precedenti` ed `Esercizio`.
+1. Se un foglio manca, scarica di nuovo il modello come spiegato in [Scaricare il modello](#scaricare-il-modello) e ricopia i tuoi dati. Se manca il foglio `Esercizio`, il file è stato fatto con un modello vecchio: scarica il modello nuovo.
 1. Salva il file come `Cartella di lavoro di Excel (*.xlsx)`, chiudi Excel e ripeti la conversione.
 
-### `Errore nel file dati statici:` seguito da un nome, da `foglio «Costi»` e da `queste voci di spesa non sono tra quelle accettate`
+### `Errore nel file dati statici:` seguito da un nome, da `foglio «Costi»` o `foglio «Contatori»` e da `non sono tra quelle accettate` o `non sono tra quelli accettati`
 
-Nel foglio `Costi` c'è una voce di spesa che il programma non conosce. Il messaggio riporta ogni voce come l'hai scritta, con la cella, e elenca le voci accettate.
+Nel foglio c'è una voce di spesa o un contatore che il programma non conosce. Il messaggio riporta ogni nome come l'hai scritto, con la cella, e elenca quelli accettati.
 
 1. Apri il file dei dati statici con Excel.
-1. Vai al foglio `Costi`.
-1. Cerca la voce nella cella indicata dal messaggio.
-1. Correggila con una delle voci elencate, scritta come nel modello (vedi [Foglio `Costi`](#foglio-costi)), oppure elimina la riga.
+1. Vai al foglio indicato.
+1. Cerca il nome nella cella indicata dal messaggio.
+1. Correggilo con uno dei nomi elencati, scritto come nel modello (vedi [Foglio `Costi`](#foglio-costi) e [Foglio `Contatori`](#foglio-contatori)), oppure elimina la riga.
+1. Salva il file, chiudi Excel e ripeti la conversione.
+
+### `Errore nel file dati statici:` seguito da un nome, da un foglio e da `manca la voce`, `mancano le voci`, `manca il contatore` o `mancano i contatori`
+
+Nel foglio `Costi` o `Contatori` manca una riga. Il messaggio dice quale. Il programma non la considera zero: ogni voce e ogni contatore devono esserci.
+
+1. Apri il file dei dati statici con Excel.
+1. Aggiungi la riga che manca, scritta come nel modello, con i suoi valori. Se un valore è davvero zero, scrivi `0`.
+1. Salva il file, chiudi Excel e ripeti la conversione.
+
+### `Errore nel file dati statici:` seguito da un nome, da un foglio e da `compare due volte`
+
+Nel foglio c'è due volte lo stesso appartamento, la stessa voce di spesa o lo stesso contatore. Il messaggio dice quale e in quali celle.
+
+1. Apri il file dei dati statici con Excel.
+1. Vai al foglio e alle celle indicati.
+1. Lascia una sola riga, quella giusta, e correggi o elimina l'altra.
+1. Salva il file, chiudi Excel e ripeti la conversione.
+
+### `Errore nel file dati statici:` seguito da un nome, da un foglio e da `manca l'appartamento` o `mancano gli appartamenti`
+
+Nel foglio `Inquilini`, `Millesimali` o `Letture_precedenti` non c'è la riga di uno o più appartamenti. Il programma vuole tutti gli appartamenti da 1 a 10.
+
+1. Apri il file dei dati statici con Excel.
+1. Controlla nel foglio indicato che ci sia una riga per ogni appartamento da 1 a 10.
+1. Aggiungi la riga che manca, con il numero nella colonna `App.`, e compilala.
+1. Salva il file, chiudi Excel e ripeti la conversione.
+
+### `Errore nel file dati statici:` seguito da un nome, da un foglio, da una cella e da `non è un numero di appartamento` o `non esiste`
+
+Nella colonna `App.` c'è un valore che non è il numero di un appartamento da 1 a 10: per esempio una nota, un totale scritto a mano o il numero 11. Il programma accetta solo le righe degli appartamenti e la riga `TOTALE`.
+
+1. Apri il file dei dati statici con Excel.
+1. Vai alla cella indicata dal messaggio.
+1. Correggi il numero oppure cancella tutta la riga.
+1. Salva il file, chiudi Excel e ripeti la conversione.
+
+### `Errore nel file dati statici:` seguito da un nome, da una cella e da `manca il numero dell'appartamento` o `manca il nome`
+
+Una riga ha dei valori, ma la cella con il numero dell'appartamento (o con il nome della voce o del contatore) è vuota.
+
+1. Apri il file dei dati statici con Excel.
+1. Vai alla cella indicata dal messaggio.
+1. Scrivi il numero o il nome mancante, come nel modello, oppure cancella tutta la riga.
 1. Salva il file, chiudi Excel e ripeti la conversione.
 
 ### `Errore nel file dati statici:` seguito da un nome, da un foglio, da una cella e da `non è un numero`
@@ -341,6 +389,35 @@ Una cella che deve contenere un numero contiene del testo. Il messaggio dice il 
 1. Apri il file dei dati statici con Excel.
 1. Vai al foglio e alla cella indicati.
 1. Scrivi solo il numero, senza unità di misura e senza il simbolo `€`.
+1. Salva il file, chiudi Excel e ripeti la conversione.
+
+### `Errore nel file dati statici:` seguito da un nome, da un foglio, da una cella e da `la cella è vuota ma serve un numero`
+
+Una cella che deve contenere un numero è vuota. Il programma non la considera zero, perché un numero dimenticato sposterebbe dei soldi da un appartamento a un altro senza che nessuno se ne accorga.
+
+1. Apri il file dei dati statici con Excel.
+1. Vai al foglio e alla cella indicati.
+1. Scrivi il numero. Se è davvero zero, scrivi `0`.
+1. Salva il file, chiudi Excel e ripeti la conversione.
+
+### `Errore nel file dati statici:` seguito da un nome, dal foglio `Esercizio` e da `anno`, `data` o `lettura finale`
+
+Nel foglio `Esercizio` manca un dato o non si legge. Il messaggio dice la cella.
+
+- `l'anno dell'esercizio è vuoto` o `non è un anno`: scrivi l'anno con quattro cifre, per esempio `2026`.
+- `la data di inizio dell'esercizio è vuota` o `non è una data`: scrivi la data come `31/12/2025`.
+- `manca la data della lettura finale` o `manca la lettura finale della data`: la lettura finale e la sua data vanno scritte insieme. Scrivile tutte e due oppure cancella quella che hai scritto.
+
+1. Apri il file dei dati statici con Excel.
+1. Vai alla cella indicata dal messaggio e correggila.
+1. Salva il file, chiudi Excel e ripeti la conversione.
+
+### `Alcune letture finali sono più basse delle letture iniziali dei dati statici`
+
+Il file dei dati statici e il file FC_report non sono dello stesso esercizio, oppure una lettura è sbagliata. Il messaggio elenca ogni contatore con la lettura finale (del file FC_report, o scritta nel foglio `Esercizio` se l'hai usata) e la lettura iniziale (del file dei dati statici). Il programma non crea il file `Riparto`, perché i consumi sarebbero negativi.
+
+1. Controlla di aver scelto il file dei dati statici dello stesso esercizio del file FC_report. Le letture iniziali devono essere le letture finali dell'esercizio precedente.
+1. Se il file è quello giusto, apri il file dei dati statici con Excel e controlla le letture dei contatori elencati nei fogli `Letture_precedenti` ed `Esercizio`.
 1. Salva il file, chiudi Excel e ripeti la conversione.
 
 ### `Impossibile creare il file` seguito da un nome e da una cartella
@@ -370,11 +447,11 @@ Questa frase apre una finestra dal titolo `siemens-converter - Errore`. Sotto la
 Serve Python 3.15 con il pacchetto installato (vedi la [guida per sviluppatori](development.md)).
 
 ```bash
-python -m siemens_converter FC_report.xls [static_data.xlsx]
+python -m siemens_converter FC_report.xls static_data.xlsx
 ```
 
 - Il primo argomento è il file FC_report ed è obbligatorio.
-- Il secondo argomento è il file dei dati statici ed è facoltativo.
+- Il secondo argomento è il file dei dati statici ed è obbligatorio: con un solo file il comando stampa un messaggio ed esce con codice 1.
 - L'ordine dei due argomenti non conta: il file `.xlsx` viene usato come file dei dati statici.
 - Il file `Riparto_<numero di serie>_<data>.xlsx` viene creato nella cartella del file FC_report.
 - Senza argomenti il comando stampa le istruzioni d'uso ed esce con codice 1.

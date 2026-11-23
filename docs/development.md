@@ -6,7 +6,7 @@
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | `models.py`        | Pure dataclasses for the report and the static data, no I/O                                 |
 | `parser.py`        | FC_report parsing (HTML table saved as `.xls`)                                              |
-| `static_reader.py` | Static data XLSX parsing                                                                    |
+| `static_reader.py` | Static data XLSX parsing and the check of its start readings against the report             |
 | `writer.py`        | XLSX generation: copies `template.xlsx`, injects values, adds `Inquilini` and `Dati Report` |
 | `__main__.py`      | CLI entry point (arguments, drag-and-drop, Windows dialogs), wires the pipeline             |
 
