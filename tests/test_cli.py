@@ -312,6 +312,32 @@ def test_static_data_of_another_exercise(monkeypatch, capsys, tmp_path, console)
 
 
 @both_ways
+def test_meter_final_reading_below_the_initial_reading(
+    monkeypatch, capsys, tmp_path, console
+):
+    report = copy(FC_REPORT, tmp_path)
+    wb = openpyxl.load_workbook(STATIC_DATA)
+    wb["Contatori"]["D4"] = 1380  # gas: initial 12000
+    static = tmp_path / "dati_2026.xlsx"
+    wb.save(static)
+
+    assert refusal(
+        monkeypatch,
+        capsys,
+        report,
+        static,
+        console=console,
+        progress=READING + "Lettura dei dati statici da dati_2026.xlsx ...\n",
+    ) == (
+        "Errore nel file dati statici: «dati_2026.xlsx», foglio «Contatori», cella "
+        "D4: la lettura finale di «GAS METANO CT» (1380) è più bassa della "
+        "lettura iniziale (12000, cella C4). Controllare le due letture, scrivere "
+        "quella sbagliata e ripetere la conversione."
+    )
+    assert list(tmp_path.glob("Riparto_*.xlsx")) == []
+
+
+@both_ways
 def test_report_is_a_folder(monkeypatch, capsys, tmp_path, console):
     folder = tmp_path / "FC_report_cartella.xls"
     folder.mkdir()

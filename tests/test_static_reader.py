@@ -346,6 +346,23 @@ def test_unknown_meter(tmp_path: Path):
     )
 
 
+def test_meter_final_reading_below_the_initial_reading(tmp_path: Path):
+    path = edited(tmp_path, "Contatori", D4=1380)  # GAS METANO CT: 12000 to 13800
+
+    assert refusal(path) == (
+        "«dati_2026.xlsx», foglio «Contatori», cella D4: la lettura finale di "
+        "«GAS METANO CT» (1380) è più bassa della lettura iniziale (12000, cella "
+        "C4). Controllare le due letture, scrivere quella sbagliata e ripetere "
+        "la conversione."
+    )
+
+
+def test_meter_final_reading_equal_to_the_initial_reading(tmp_path: Path):
+    path = edited(tmp_path, "Contatori", C5=3000, D5=3000)
+
+    assert parse_static_data(path).meters[2].final == 3000
+
+
 # -- Numbers --
 
 

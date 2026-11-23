@@ -406,16 +406,27 @@ def _read_costi(
 def _read_contatori(
     file: str, ws: openpyxl.worksheet.worksheet.Worksheet
 ) -> list[MeterReading]:
-    """Read Contatori sheet: Contatore, Unità, Lettura iniziale, Lettura finale."""
-    return [
-        MeterReading(
-            name=label,
-            unit=str(row[1]) if len(row) > 1 and row[1] else "",
-            initial=_number(file, ws, row_no, row, 2, float),
-            final=_number(file, ws, row_no, row, 3, float),
-        )
-        for label, row_no, row in _labelled_rows(file, ws)
-    ]
+    """Read Contatori sheet: Contatore, Unità, Lettura iniziale, Lettura finale.
+
+    A final reading lower than the initial one is refused; equal is valid.
+    """
+    meters = []
+    for label, row_no, row in _labelled_rows(file, ws):
+        initial = _number(file, ws, row_no, row, 2, float)
+        final = _number(file, ws, row_no, row, 3, float)
+        if final < initial:
+            raise _cell_error(
+                file,
+                ws,
+                f"D{row_no}",
+                f"la lettura finale di «{label}» ({_amount(final)}) è più bassa "
+                f"della lettura iniziale ({_amount(initial)}, cella C{row_no}). "
+                "Controllare le due letture, scrivere quella sbagliata e ripetere "
+                "la conversione.",
+            )
+        unit = str(row[1]) if len(row) > 1 and row[1] else ""
+        meters.append(MeterReading(label, unit, initial, final))
+    return meters
 
 
 def _read_letture_precedenti(
