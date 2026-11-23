@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; worker-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Riparto delle spese dai report Siemens</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Riparto delle spese dai report Siemens</h1>
+      <p>
+        Questa pagina trasforma il file FC_report, esportato dal sistema Siemens, e il file dei
+        dati statici nel file Riparto in formato Excel, con il riparto delle spese di
+        riscaldamento e dell'acqua tra gli appartamenti.
+      </p>
+
+      <ol>
+        <li>
+          Scegliere o trascinare qui sotto il file FC_report (il file .xls esportato dal sistema
+          Siemens) e il file dei dati statici (il file .xlsx compilato per l'esercizio). I due
+          file si possono scegliere in qualsiasi ordine.
+        </li>
+        <li>Attendere la fine della conversione.</li>
+        <li>
+          Scaricare il file Riparto e leggere le eventuali segnalazioni sotto «Attenzione».
+        </li>
+      </ol>
+
+      <p>
+        Il file dei dati statici si compila a partire da
+        <a href="https://github.com/gjed/siemens-converter/releases/latest/download/static_data_template.xlsx"
+          >static_data_template.xlsx</a
+        >, che si scarica anche dalla
+        <a href="https://github.com/gjed/siemens-converter/releases/latest"
+          >pagina dell'ultima versione</a
+        >.
+      </p>
+
+      <noscript>
+        <p class="message error" role="alert">
+          Per usare questa pagina è necessario attivare JavaScript nel browser.
+        </p>
+      </noscript>
+
+      <p id="loading" class="message" role="status">
+        Caricamento del programma di conversione in corso. Alla prima visita può richiedere
+        qualche istante.
+      </p>
+
+      <label id="dropzone" class="dropzone" for="files">
+        <span class="dropzone-title">Trascinare qui i due file</span>
+        <span>oppure fare clic per sceglierli dal computer</span>
+        <input id="files" class="visually-hidden" type="file" multiple />
+      </label>
+
+      <ul id="chosen" class="chosen" aria-label="File scelti"></ul>
+
+      <div class="actions">
+        <button id="convert" type="button" disabled>Convertire</button>
+        <button id="reset" type="button" class="secondary" disabled>Ricominciare</button>
+      </div>
+
+      <section id="outcome" aria-live="polite"></section>
+
+      <section class="privacy">
+        <h2>Riservatezza dei dati</h2>
+        <p>
+          I file scelti vengono elaborati soltanto in questo browser, sul computer in uso, e non
+          vengono inviati a nessun server. La pagina non usa strumenti di analisi né script di
+          terze parti.
+        </p>
+        <p>
+          Il programma per Windows e per Linux resta disponibile nella
+          <a href="https://github.com/gjed/siemens-converter/releases/latest"
+            >pagina dell'ultima versione</a
+          >.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
