@@ -8,7 +8,7 @@ Define how the converter receives its two inputs, the required FC_report `.xls` 
 
 ### Requirement: CLI accepts two input files
 
-The CLI entry point SHALL accept two positional arguments: the FC_report `.xls` path and the static data `.xlsx` path. A path that does not exist SHALL be reported in Italian, naming the file and what to do, with exit code 1.
+The CLI entry point SHALL accept two positional arguments: the FC_report `.xls` path and the static data `.xlsx` path, both required. A path that does not exist SHALL be reported in Italian, naming the file and what to do, with exit code 1.
 
 #### Scenario: Both files provided via CLI
 
@@ -18,7 +18,7 @@ The CLI entry point SHALL accept two positional arguments: the FC_report `.xls` 
 #### Scenario: Only FC_report provided (backward compatible)
 
 - **WHEN** the user runs `python -m siemens_converter <FC_report.xls>` without a second argument
-- **THEN** the system SHALL produce the output from the FC_report alone, with no static data merged
+- **THEN** the system SHALL display an Italian message that names the FC_report, says the static data file is missing and points to `static_data_template.xlsx` on the release page, exit with code 1 and write no output
 
 #### Scenario: FC_report not found
 
@@ -33,14 +33,14 @@ The CLI entry point SHALL accept two positional arguments: the FC_report `.xls` 
 #### Scenario: No arguments on a console
 
 - **WHEN** the user runs the CLI from a console without arguments
-- **THEN** the system SHALL print the usage text in Italian and exit with code 1
+- **THEN** the system SHALL print the usage text in Italian, which marks both files as required, and exit with code 1
 
 ### Requirement: Windows dialog with two sequential file selections
 
 When running in no-console mode (PyInstaller `--noconsole`) and started without file arguments, the system SHALL show two sequential Windows file-open dialogs:
 
 1. First dialog: FC_report `.xls` file selection (required — cancelling exits the application)
-1. Second dialog: static data `.xlsx` file selection (optional — cancelling skips static data and proceeds with FC_report only)
+1. Second dialog: static data `.xlsx` file selection (required — cancelling is refused with the message that the static data file is missing)
 
 #### Scenario: User selects both files via dialog
 
@@ -50,7 +50,7 @@ When running in no-console mode (PyInstaller `--noconsole`) and started without 
 #### Scenario: User selects only FC_report via dialog
 
 - **WHEN** the user selects an FC_report but cancels the static data dialog
-- **THEN** the system SHALL process only the FC_report (backward compatible behavior)
+- **THEN** the system SHALL display an Italian message box that says the static data file is missing and points to `static_data_template.xlsx` on the release page, and write no output
 
 #### Scenario: User cancels FC_report dialog
 
@@ -59,7 +59,7 @@ When running in no-console mode (PyInstaller `--noconsole`) and started without 
 
 ### Requirement: Drag-and-drop supports two files
 
-When two files are dragged onto the `.exe`, the system SHALL route them by extension regardless of argument order: the `.xlsx` file is static data, the other is the FC_report. When the files given are not exactly one `.xlsx` and one other file, or are only one `.xlsx`, the system SHALL say in Italian which file is missing or doubled, and SHALL NOT parse any file.
+When two files are dragged onto the `.exe`, the system SHALL route them by extension regardless of argument order: the `.xlsx` file is static data, the other is the FC_report. When the files given are not exactly one `.xlsx` and one other file, the system SHALL say in Italian which file is missing or doubled, and SHALL NOT parse any file.
 
 #### Scenario: Two files dragged onto exe
 
@@ -69,7 +69,7 @@ When two files are dragged onto the `.exe`, the system SHALL route them by exten
 #### Scenario: One file dragged onto exe
 
 - **WHEN** the user drags only an FC_report `.xls` onto the executable
-- **THEN** the system SHALL process only the FC_report (backward compatible)
+- **THEN** the system SHALL display an Italian message that names the file, says the static data file is missing and points to `static_data_template.xlsx` on the release page, and exit with code 1
 
 #### Scenario: Only the static data file given
 
