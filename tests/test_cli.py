@@ -245,6 +245,44 @@ def test_static_data_value_is_not_a_number(monkeypatch, capsys, tmp_path, consol
     )
 
 
+@both_ways
+def test_report_is_a_folder(monkeypatch, capsys, tmp_path, console):
+    folder = tmp_path / "FC_report_cartella.xls"
+    folder.mkdir()
+
+    assert refusal(
+        monkeypatch,
+        capsys,
+        folder,
+        console=console,
+        progress=f"Lettura del report {folder.name} ...\n",
+    ) == (
+        "Errore nel report FC: il file «FC_report_cartella.xls» non si può aprire "
+        "per leggerlo. Controllare che sia un file e non una cartella, che non "
+        "sia aperto in un altro programma e che si possa leggere, e ripetere la "
+        "conversione."
+    )
+
+
+@both_ways
+def test_output_cannot_be_written(monkeypatch, capsys, tmp_path, console):
+    report = copy(FC_REPORT, tmp_path)
+    output = tmp_path / "Riparto_TE99999999_15-01-2026.xlsx"
+    output.mkdir()  # a file of that name cannot replace a folder
+
+    assert refusal(
+        monkeypatch,
+        capsys,
+        report,
+        console=console,
+        progress=READING + f"Scrittura di {output.name} ...\n",
+    ) == (
+        f"Impossibile creare il file «{output.name}» nella cartella {tmp_path}. "
+        "Se è aperto in Excel, chiuderlo; altrimenti controllare di poter "
+        "scrivere in quella cartella. Poi ripetere la conversione."
+    )
+
+
 # -- Successful runs --
 
 

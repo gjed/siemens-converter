@@ -123,6 +123,17 @@ def test_static_data_is_not_a_report(tmp_path):
     )
 
 
+def test_folder_instead_of_a_report(tmp_path):
+    folder = tmp_path / "FC_report_cartella.xls"
+    folder.mkdir()
+
+    assert refusal(folder) == (
+        "il file «FC_report_cartella.xls» non si può aprire per leggerlo. "
+        "Controllare che sia un file e non una cartella, che non sia aperto in un "
+        "altro programma e che si possa leggere, e ripetere la conversione."
+    )
+
+
 def test_text_without_a_table(tmp_path):
     path = edited(tmp_path, lambda text: "<html><body>Ciao</body></html>")
 
