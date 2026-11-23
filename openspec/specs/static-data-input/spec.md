@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the optional static data workbook through which a building administrator supplies what the Siemens FC_report does not contain: tenant names, millesimali, yearly costs, main utility meter readings and each apartment's previous readings. The capability covers the blank template that is filled in, the reader that turns a filled workbook into a `StaticData` object, the data model, and the cells of the output workbook that receive the data.
+Define the required static data workbook through which a building administrator supplies what the Siemens FC_report does not contain: the exercise year and start date, tenant and owner names, millesimali, yearly costs, main utility meter readings, the start readings of the central heat meters and each apartment's previous readings. The capability covers the blank template that is filled in, the reader that turns a filled workbook into a `StaticData` object and refuses a malformed one, the check of its start readings against the report, the data model, and the cells of the output workbook that receive the data.
 
 ## Requirements
 

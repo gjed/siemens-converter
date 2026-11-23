@@ -81,9 +81,7 @@ proposal.md for the motivation. The maintainer settled the three open questions 
   the maintainer; the refusal says what to choose.
 - [Strict rows refuse a file that used to work, for example a note typed under the table] → the
   message names the cell and says what the sheet accepts.
-- [A report of exercise N read with the static data of exercise N+1 is refused, but one read with a
-  static data file whose readings are all far below the report's is not] → the check can only
-  catch readings that went backwards; it cannot know the year of the report.
+- [Static data that is wrong but never above the report is accepted] → the check only catches readings that went backwards; it cannot know the year of the report.
 
 ## Migration Plan
 

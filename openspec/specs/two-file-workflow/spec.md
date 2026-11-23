@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define how the converter receives its two inputs, the required FC_report `.xls` and the optional static data `.xlsx`, in each of the ways it is started: from the command line, by dragging files onto the Windows executable, and through file dialogs when the executable is opened without files.
+Define how the converter receives its two inputs, the required FC_report `.xls` and the required static data `.xlsx`, in each of the ways it is started: from the command line, by dragging files onto the Windows executable, and through file dialogs when the executable is opened without files.
 
 ## Requirements
 
