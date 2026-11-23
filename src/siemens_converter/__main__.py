@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 
 def _has_console() -> bool:
@@ -69,24 +70,68 @@ def _win_open_file_dialog(title: str, filetypes: str) -> str | None:
         if ctypes.windll.comdlg32.GetOpenFileNameW(ctypes.byref(ofn)):  # type: ignore[union-attr]
             return buf.value or None
         return None
-    except Exception as exc:
-        _msgbox("Errore", f"Impossibile aprire la finestra di selezione file: {exc}")
+    except Exception:
+        _msgbox(
+            "Errore",
+            "Impossibile aprire la finestra di selezione dei file. "
+            "Trascinare i file da convertire sopra l'icona del programma.",
+        )
         return None
+
+
+def _fail(message: str) -> NoReturn:
+    """Show *message* (console, or message box without one) and exit with code 1."""
+    if _has_console():
+        print(message)
+    else:
+        _msgbox("Errore", message)
+    sys.exit(1)
+
+
+_FIND_REPORT = (
+    "il file FC_report esportato dal sistema Siemens (il file .xls, il cui nome "
+    "comincia con FC_report)"
+)
+
+
+def _route_files(paths: list[Path]) -> tuple[Path, Path | None]:
+    """Split the files given into (FC_report, static data or None).
+
+    Explorer does not preserve drag order, so the .xlsx is the static data and
+    the other file is the FC_report. Exits with a message when the files given
+    are not exactly one of each, or just the FC_report.
+    """
+    static = [p for p in paths if p.suffix.lower() == ".xlsx"]
+    reports = [p for p in paths if p.suffix.lower() != ".xlsx"]
+    if not reports and len(static) == 1:
+        _fail(
+            f"Manca il file FC_report: è stato scelto solo «{static[0].name}», che è "
+            "un file .xlsx e quindi viene usato come file dei dati statici. "
+            f"Scegliere anche {_FIND_REPORT} e ripetere la conversione."
+        )
+    if not reports:
+        _fail(
+            f"Sono stati scelti due file .xlsx, «{static[0].name}» e "
+            f"«{static[1].name}», ma ne serve uno solo: il file dei dati statici. "
+            f"Manca il file FC_report. Scegliere {_FIND_REPORT}, insieme a un solo "
+            "file dei dati statici, e ripetere la conversione."
+        )
+    if len(reports) > 1:
+        _fail(
+            f"Sono stati scelti due file che non sono .xlsx, «{reports[0].name}» e "
+            f"«{reports[1].name}», ma ne serve uno solo: il file FC_report. Il file "
+            "dei dati statici deve essere un file .xlsx. Scegliere il solo file "
+            "FC_report, oppure il file FC_report insieme al file dei dati statici, "
+            "e ripetere la conversione."
+        )
+    return reports[0], static[0] if static else None
 
 
 def main() -> None:
     """Run the converter from CLI or drag-and-drop."""
-    fc_path: Path | None = None
-    static_path: Path | None = None
-
     if len(sys.argv) >= 2:
         # CLI / drag-and-drop mode
-        args = [Path(a) for a in sys.argv[1:3]]
-        # Explorer does not preserve drag order: route the .xlsx to static data
-        args.sort(key=lambda p: p.suffix.lower() == ".xlsx")
-        fc_path = args[0]
-        if len(args) > 1:
-            static_path = args[1]
+        fc_path, static_path = _route_files([Path(a) for a in sys.argv[1:3]])
     elif not _has_console():
         # No-console (PyInstaller --noconsole): use Windows file dialogs
         fc_str = _win_open_file_dialog(
@@ -95,83 +140,59 @@ def main() -> None:
         )
         if fc_str is None:
             sys.exit(0)  # User cancelled
-        fc_path = Path(fc_str)
 
         # Second dialog for static data (optional — user can cancel)
         static_str = _win_open_file_dialog(
             "Seleziona dati statici (.xlsx) — o Annulla per saltare",
             "Excel files\0*.xlsx\0All files\0*.*\0",
         )
-        if static_str is not None:
-            static_path = Path(static_str)
+        picked = [Path(fc_str)] + ([Path(static_str)] if static_str else [])
+        fc_path, static_path = _route_files(picked)
     else:
-        msg = (
-            "Usage: siemens-converter <FC_report.xls> [static_data.xlsx]\n"
+        print(
+            "Uso: siemens-converter <FC_report.xls> [dati_statici.xlsx]\n"
             "\n"
-            "Arguments:\n"
-            "  FC_report.xls      Siemens FC_report file (required)\n"
-            "  static_data.xlsx   Static condominium data file (optional)"
+            "Argomenti:\n"
+            "  FC_report.xls      il file esportato dal sistema Siemens (obbligatorio)\n"
+            "  dati_statici.xlsx  il file dei dati statici (facoltativo)"
         )
-        print(msg)
         sys.exit(1)
 
-    # Validate FC_report
-    if not fc_path.exists():
-        msg = f"File not found: {fc_path}"
-        if _has_console():
-            print(msg)
-        else:
-            _msgbox("Errore", msg)
-        sys.exit(1)
+    for path, what in ((fc_path, "FC_report"), (static_path, "dei dati statici")):
+        if path is not None and not path.exists():
+            _fail(
+                f"Il file {what} «{path}» non esiste. Controllare che non sia stato "
+                "spostato o rinominato e ripetere la conversione."
+            )
 
-    # Validate static data file if provided
-    if static_path is not None and not static_path.exists():
-        msg = f"Static data file not found: {static_path}"
-        if _has_console():
-            print(msg)
-        else:
-            _msgbox("Errore", msg)
-        sys.exit(1)
-
-    from siemens_converter.parser import parse_fc_report
+    from siemens_converter.parser import ReportError, parse_fc_report
+    from siemens_converter.static_reader import StaticDataError, parse_static_data
     from siemens_converter.writer import write_xlsx
 
     if _has_console():
-        print(f"Parsing {fc_path.name} ...")
+        print(f"Lettura del report {fc_path.name} ...")
 
     try:
         report = parse_fc_report(fc_path)
-    except Exception as exc:
-        msg = f"Errore nel report FC: {exc}"
-        if _has_console():
-            print(msg)
-        else:
-            _msgbox("Errore", msg)
-        sys.exit(1)
+    except ReportError as exc:
+        _fail(f"Errore nel report FC: {exc}")
 
     # Parse static data if provided
     static_data = None
     if static_path is not None:
-        from siemens_converter.static_reader import parse_static_data
-
         if _has_console():
-            print(f"Reading static data from {static_path.name} ...")
+            print(f"Lettura dei dati statici da {static_path.name} ...")
         try:
             static_data = parse_static_data(static_path)
-        except Exception as exc:
-            msg = f"Errore nel file dati statici: {exc}"
-            if _has_console():
-                print(msg)
-            else:
-                _msgbox("Errore", msg)
-            sys.exit(1)
+        except StaticDataError as exc:
+            _fail(f"Errore nel file dati statici: {exc}")
 
     date_safe = report.header.report_date.replace("/", "-")
     out_name = f"Riparto_{report.header.serial}_{date_safe}.xlsx"
     output_path = fc_path.parent / out_name
 
     if _has_console():
-        print(f"Writing {output_path.name} ...")
+        print(f"Scrittura di {output_path.name} ...")
 
     write_xlsx(report, output_path, static_data=static_data)
 
@@ -182,9 +203,9 @@ def main() -> None:
     if _has_console():
         if warnings:
             print(warnings.lstrip("\n") + "\n")
-        print(f"Done: {output_path}")
+        print(f"Fatto: {output_path}")
         if sys.platform == "win32":
-            input("\nPress Enter to close...")
+            input("\nPremere Invio per chiudere...")
     else:
         _msgbox("siemens-converter", f"Fatto!\n\n{output_path.name}{warnings}")
 
