@@ -453,7 +453,7 @@ Questa frase apre una finestra dal titolo `siemens-converter - Errore`. Sotto la
 
 ## Per sviluppatori: riga di comando
 
-Serve Python 3.15 con il pacchetto installato (vedi la [guida per sviluppatori](development.md)).
+Serve Python 3.14 o 3.15 con il pacchetto installato (vedi la [guida per sviluppatori](development.md)).
 
 ```bash
 python -m siemens_converter FC_report.xls static_data.xlsx
