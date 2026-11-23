@@ -252,6 +252,15 @@ Nel file FC_report la descrizione di un dispositivo non contiene il numero dell'
 1. Scarica di nuovo il file FC_report.
 1. Ripeti la conversione.
 
+### `Errore nel report FC: il file` seguito da un nome e da `non si può aprire per leggerlo`
+
+Il programma non riesce ad aprire il file FC_report. Succede se hai scelto una cartella invece di un file, se il file è aperto in un altro programma o se non hai il permesso di leggerlo.
+
+1. Controlla di aver scelto un file e non una cartella.
+1. Chiudi il file negli altri programmi che lo tengono aperto.
+1. Se il file è su una chiavetta o su un'unità di rete, copialo sul Desktop.
+1. Ripeti la conversione.
+
 ### `Errore nel report FC: il report non è completo e il riparto non è stato creato.`
 
 Il programma non ha creato il file `Riparto`, perché con questi dati il risultato sarebbe sbagliato. Il messaggio elenca che cosa non va in una o due liste.
@@ -334,6 +343,14 @@ Una cella che deve contenere un numero contiene del testo. Il messaggio dice il 
 1. Scrivi solo il numero, senza unità di misura e senza il simbolo `€`.
 1. Salva il file, chiudi Excel e ripeti la conversione.
 
+### `Impossibile creare il file` seguito da un nome e da una cartella
+
+Il programma non riesce a scrivere il file `Riparto`. La causa più frequente è che il file `Riparto` di una conversione precedente è aperto in Excel. Un'altra è che non hai il permesso di scrivere nella cartella del file FC_report.
+
+1. Chiudi in Excel il file `Riparto` indicato dal messaggio.
+1. Se non era aperto, copia il file FC_report in una cartella in cui puoi scrivere, per esempio il Desktop.
+1. Ripeti la conversione.
+
 ### `Impossibile aprire la finestra di selezione dei file.`
 
 Dopo il doppio clic il programma non riesce ad aprire la finestra per scegliere il file.
@@ -343,9 +360,8 @@ Dopo il doppio clic il programma non riesce ad aprire la finestra per scegliere 
 
 ### `La conversione non è riuscita per un errore imprevisto del programma.`
 
-Questa frase apre una finestra dal titolo `siemens-converter - Errore`. Sotto la frase, dopo `Dettagli tecnici:`, c'è un testo tecnico in inglese. Il programma ha incontrato un errore che non sa spiegare. Una causa frequente è che il file `Riparto` di una conversione precedente è aperto in Excel.
+Questa frase apre una finestra dal titolo `siemens-converter - Errore`. Sotto la frase, dopo `Dettagli tecnici:`, c'è un testo tecnico in inglese. Il programma ha incontrato un errore che non sa spiegare.
 
-1. Chiudi in Excel il file `Riparto` di una conversione precedente.
 1. Ripeti la conversione.
 1. Se la finestra compare ancora, fai una foto della finestra, o copia il testo, e inviala a chi ti ha fornito il programma insieme al nome dei file che stavi convertendo.
 
