@@ -8,11 +8,12 @@
 | `parser.py`        | FC_report parsing (HTML table saved as `.xls`)                                              |
 | `static_reader.py` | Static data XLSX parsing and the check of its start readings against the report             |
 | `writer.py`        | XLSX generation: copies `template.xlsx`, injects values, adds `Inquilini` and `Dati Report` |
-| `__main__.py`      | CLI entry point (arguments, drag-and-drop, Windows dialogs), wires the pipeline             |
+| `pipeline.py`      | The conversion sequence and the file routing, shared by the CLI and the web page            |
+| `__main__.py`      | CLI entry point (arguments, drag-and-drop, Windows dialogs), calls `pipeline.py`            |
 
 ## Setup
 
-Python 3.15 is required.
+Python 3.14 or 3.15 is required.
 
 ```bash
 pip install -e ".[dev]"

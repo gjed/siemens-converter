@@ -5,29 +5,30 @@ context: |
 
   ## Tech Stack
 
-  - Python 3.15 only (`requires-python = ">=3.15"`)
+  - Python 3.14 and 3.15 (`requires-python = ">=3.14"`): 3.14 is what Pyodide runs in the web page
   - setuptools and setuptools-scm (pyproject.toml, version from the git tag, src-layout, `template.xlsx` and `static_data_template.xlsx` as package data)
   - openpyxl (reads the static data file, fills the XLSX template)
   - `html.parser` from the standard library (reads the FC_report)
   - pytest + pytest-cov (testing)
   - PyInstaller (Windows `.exe` and Linux binary)
-  - GitHub Actions (a single CI job on Python 3.15, semantic-release on `main`, tag-triggered binary builds)
+  - Pyodide (the web page runs the same package in the browser), served from GitHub Pages
+  - GitHub Actions (tests on Python 3.14 and 3.15, a web page job, semantic-release on `main`, tag-triggered binary builds)
 
   ## Project Conventions
 
   ### Code Style
 
-  - Modules are single-responsibility: `models` (dataclasses, no I/O), `parser` (FC_report HTML reading), `static_reader` (static data XLSX reading), `writer` (template copy and XLSX output), `__main__` (CLI, drag-and-drop and Windows dialogs)
+  - Modules are single-responsibility: `models` (dataclasses, no I/O), `parser` (FC_report HTML reading), `static_reader` (static data XLSX reading), `writer` (template copy and XLSX output), `pipeline` (the conversion sequence and file routing, no console or OS code), `__main__` (CLI, drag-and-drop and Windows dialogs)
   - `from __future__ import annotations` in every source module
   - Type hints on public functions
 
   ### Architecture Patterns
 
-  - Pipeline: `parse_fc_report` + `parse_static_data` -> `write_xlsx`, which first checks the static data against the report
+  - Pipeline: `parse_fc_report` + `parse_static_data` -> `write_xlsx`, which first checks the static data against the report; `pipeline.py` holds the sequence and the file routing, shared by the CLI and the web page
   - Pure dataclasses in models.py — no I/O
   - Every cost formula lives in `template.xlsx`; the writer injects values into fixed cells and never computes costs
   - The writer adds two generated sheets to the template copy: `Inquilini` (apartment and tenant list) and `Dati Report` (the FC_report device table)
-  - Entry point (`__main__.py`) wires the pipeline — no business logic there
+  - Entry points (`__main__.py`, the web page) call `pipeline.py` — no business logic there
   - Output file: `Riparto_<serial>_<dd-mm-yyyy>.xlsx`, written next to the FC_report
 
   ### Testing Strategy
