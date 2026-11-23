@@ -205,7 +205,7 @@ def _write_inquilini_sheet(
         ws.row_dimensions[i + 2].height = 25
 
 
-# -- Mapping: cost label -> Tabella_2026 row (E column) --
+# -- Mapping: cost label -> Tabella row (E column) --
 _COST_LABEL_TO_ROW: dict[str, int] = {
     "Energia elettrica": 3,
     "Gas metano": 4,
@@ -215,7 +215,7 @@ _COST_LABEL_TO_ROW: dict[str, int] = {
     "Acqua sanitaria manutenzione": 8,
 }
 
-# -- Mapping: meter name -> Tabella_2026 row for F (initial) and G (final) columns --
+# -- Mapping: meter name -> Tabella row for F (initial) and G (final) columns --
 _METER_NAME_TO_ROW: dict[str, int] = {
     "Energia elettrica CT": 20,
     "Gas metano CT": 21,
@@ -228,7 +228,7 @@ def _inject_static_data(wb: openpyxl.Workbook, static_data: StaticData) -> None:
 
     Populates:
     - Tabelle millesimali: subalterno (B), heat energy (C), water energy (E)
-    - Tabella_2026: costs (E3-E8), meter readings (F20-G22)
+    - Tabella: costs (E3-E8), meter readings (F20-G22)
     - Ripartizione: previous readings in column B of heat/water/AFS rows
     """
     # -- Tabelle millesimali (rows 4-13 for apartments 1-10) --
@@ -240,14 +240,14 @@ def _inject_static_data(wb: openpyxl.Workbook, static_data: StaticData) -> None:
             ws_mill.cell(row=row, column=3, value=m.heat_energy_kwh)
             ws_mill.cell(row=row, column=5, value=m.water_energy_kwh)
 
-    # -- Tabella_2026: costs --
-    ws_tab = wb["Tabella_2026"]
+    # -- Tabella: costs --
+    ws_tab = wb["Tabella"]
     for cost in static_data.costs:
         tab_row = _COST_LABEL_TO_ROW.get(cost.label)
         if tab_row is not None:
             ws_tab.cell(row=tab_row, column=5, value=cost.amount)
 
-    # -- Tabella_2026: meter readings (case-insensitive name match) --
+    # -- Tabella: meter readings (case-insensitive name match) --
     _meter_lookup = {k.upper(): v for k, v in _METER_NAME_TO_ROW.items()}
     for meter in static_data.meters:
         meter_row = _meter_lookup.get(meter.name.upper())

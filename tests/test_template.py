@@ -1,5 +1,10 @@
-import openpyxl
+import datetime
 from importlib.resources import files
+
+import openpyxl
+
+# Physical constants of the plant: the only literals the first sheet may hold.
+CONSTANTS = {"C40": 9.45, "C48": 93, "C123": 13, "C124": 50}
 
 
 def _load_template():
@@ -17,10 +22,66 @@ def test_template_has_three_sheets():
     assert len(wb.sheetnames) == 3
 
 
-def test_template_ripartizione_sheet_exists():
+def test_template_sheet_names_do_not_depend_on_the_exercise():
     wb = _load_template()
-    # First sheet name should contain "Ripartizione" or similar
-    assert any("Ripartizione" in name or "Riparto" in name for name in wb.sheetnames)
+    assert wb.sheetnames == ["Ripartizione", "Tabella", "Tabelle millesimali"]
+
+
+def test_template_defined_names_follow_the_sheet_names():
+    wb = _load_template()
+    assert wb["Ripartizione"].defined_names["costoenegiaelettrica"].attr_text == (
+        "Ripartizione!$C$26"
+    )
+    assert wb["Tabella"].defined_names["costoafs"].attr_text == "Tabella!$E$13"
+
+
+def test_template_formulas_do_not_mention_a_dated_sheet():
+    wb = _load_template()
+    dated = [
+        f"{ws.title}!{c.coordinate}"
+        for ws in wb.worksheets
+        for row in ws.iter_rows()
+        for c in row
+        if isinstance(c.value, str)
+        and c.value.startswith("=")
+        and ("Tabella_2026" in c.value or "Ripartizione_Termo" in c.value)
+    ]
+    assert dated == []
+
+
+def test_template_first_sheet_has_no_exercise_literal():
+    """A number or a date typed into the first sheet is data of one exercise."""
+    ws = _load_template().worksheets[0]
+    literals = {
+        c.coordinate: c.value
+        for row in ws.iter_rows()
+        for c in row
+        if isinstance(c.value, (int, float, datetime.date))
+        and not isinstance(c.value, bool)
+    }
+    assert literals == CONSTANTS
+
+
+def test_template_year_labels_do_not_name_a_year():
+    ws = _load_template().worksheets[0]
+    assert ws["A28"].value.endswith("RISCALDAMENTO FINE GESTIONE")
+    assert ws["A31"].value.endswith("ACS in ct FINE GESTIONE")
+
+
+def test_template_tenancy_leftovers_are_cleared():
+    ws = _load_template().worksheets[0]
+    for r in range(257, 274):
+        assert ws.cell(row=r, column=11).value is None  # K: tenancy note
+        assert ws.cell(row=r, column=14).value is None  # N: days of the tenant
+    # The formula that splits the year stays
+    assert ws["M261"].value == "=365-N261"
+
+
+def test_template_dates_of_tabella_are_cleared():
+    ws = _load_template()["Tabella"]
+    assert ws["G18"].value is None
+    for r in range(3, 10):
+        assert ws.cell(row=r, column=6).value is None
 
 
 def test_template_central_meter_labels_exist():
@@ -56,14 +117,14 @@ def test_template_electricity_consumption_is_meter_difference():
     wb = _load_template()
     ws = wb.worksheets[0]
     # Consumption (final - initial), not the final reading in G20
-    assert ws["C25"].value == "=Tabella_2026!H20"
+    assert ws["C25"].value == "=Tabella!H20"
 
 
 def test_template_gas_final_reading_references_final_reading():
     wb = _load_template()
     ws = wb.worksheets[0]
     # Final reading, not the consumption in H21
-    assert ws["C23"].value == "=Tabella_2026!G21"
+    assert ws["C23"].value == "=Tabella!G21"
 
 
 def test_template_fixed_cost_shares_reference_millesimali():
@@ -114,7 +175,7 @@ def test_template_apartment_cells_reference_inquilini():
 
 def test_template_tabella_2026_eur_cleared():
     wb = _load_template()
-    ws = wb["Tabella_2026"]
+    ws = wb["Tabella"]
     # EUR cost values should be cleared
     for r in range(3, 9):
         assert ws.cell(row=r, column=5).value is None

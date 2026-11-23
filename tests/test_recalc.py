@@ -127,7 +127,7 @@ def test_distributed_total_equals_costs(recalculated, variant):
     ws = wb.worksheets[0]
     costs = sum(cost.amount for cost in _static_variants()[variant].costs)
 
-    assert wb["Tabella_2026"]["E9"].value == pytest.approx(costs)
+    assert wb["Tabella"]["E9"].value == pytest.approx(costs)
     assert ws["I247"].value == pytest.approx(costs)
     assert ws["L250"].value == "esatto"
 

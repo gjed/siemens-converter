@@ -433,11 +433,11 @@ def test_static_data_millesimali(tmp_path):
 
 
 def test_static_data_costs(tmp_path):
-    """Tabella_2026 should have cost amounts in E3-E8."""
+    """Tabella should have cost amounts in E3-E8."""
     out = tmp_path / "output.xlsx"
     write_xlsx(_make_report(), out, static_data=_make_static_data())
     wb = openpyxl.load_workbook(out)
-    ws = wb["Tabella_2026"]
+    ws = wb["Tabella"]
     assert ws.cell(row=3, column=5).value == 263.44  # Energia elettrica
     assert ws.cell(row=4, column=5).value == 2141.0  # Gas metano
     assert ws.cell(row=5, column=5).value == 0.0  # Acqua
@@ -447,11 +447,11 @@ def test_static_data_costs(tmp_path):
 
 
 def test_static_data_meter_readings(tmp_path):
-    """Tabella_2026 should have meter readings in F20-G22."""
+    """Tabella should have meter readings in F20-G22."""
     out = tmp_path / "output.xlsx"
     write_xlsx(_make_report(), out, static_data=_make_static_data())
     wb = openpyxl.load_workbook(out)
-    ws = wb["Tabella_2026"]
+    ws = wb["Tabella"]
     assert ws.cell(row=20, column=6).value == 0  # elettrica initial
     assert ws.cell(row=20, column=7).value == 1086  # elettrica final
     assert ws.cell(row=21, column=6).value == 0  # gas initial
