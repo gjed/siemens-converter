@@ -1,0 +1,40 @@
+name: Pages
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # A pre-release tag (v1.2.3-rc.1) must not replace the page of the stable release.
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+
+      - name: Build the site
+        run: python web/build.py --out build/site
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/site
+
+      - id: deployment
+        uses: actions/deploy-pages@v5
