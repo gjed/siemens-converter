@@ -7,13 +7,18 @@ from __future__ import annotations
 
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import openpyxl
 import pytest
 
-from siemens_converter.models import StaticData
-from siemens_converter.parser import ReportError, parse_fc_report
+from siemens_converter.models import CentralMeterStart, StaticData
+from siemens_converter.parser import (
+    ReportError,
+    parse_fc_report,
+    warnings_with_manual_readings,
+)
 
 FIXTURE = Path(__file__).parent / "fixtures" / "FC_report_TEST_9999_2026-01-15.xls"
 STATIC_DATA = Path(__file__).parent / "fixtures" / "static_data_TEST.xlsx"
@@ -280,17 +285,65 @@ def test_both_meters_of_an_apartment_not_ok(tmp_path):
     ]
 
 
+# -- Manual final readings of the central meters --
+
+
+def read_early(rows):
+    device(rows, "Riscaldamento")[DATE] = "2026/01/03"  # apartments: 2026/01/15
+
+
+def manual(description: str, day: int) -> CentralMeterStart:
+    return CentralMeterStart(description, 1000, 2000, datetime(2026, 1, day))
+
+
+def test_manual_reading_on_the_apartment_day_clears_the_date_warning(tmp_path):
+    report = parse_fc_report(edited_report(tmp_path, read_early))
+    assert "è stato letto il 03/01/2026" in report.warnings[0]
+
+    assert warnings_with_manual_readings(report, [manual("Riscaldamento", 15)]) == []
+
+
+def test_manual_reading_days_away_from_the_apartments_is_warned(tmp_path):
+    report = parse_fc_report(edited_report(tmp_path))
+    assert report.warnings == []
+
+    warnings = warnings_with_manual_readings(report, [manual("Riscaldamento", 5)])
+
+    assert len(warnings) == 1
+    assert "«Riscaldamento» è stato letto il 05/01/2026, 10 giorni prima" in warnings[0]
+
+
+def test_manual_reading_replaces_the_status_of_its_meter(tmp_path):
+    report = parse_fc_report(
+        edited_report(tmp_path, set_cell("Sanitario", "", STATUS, "Errore"))
+    )
+    assert len(report.warnings) == 1
+
+    assert warnings_with_manual_readings(report, [manual("Sanitario", 15)]) == []
+
+
+def test_report_warnings_stand_without_a_manual_reading(tmp_path):
+    report = parse_fc_report(edited_report(tmp_path, read_early))
+    unused = CentralMeterStart("Riscaldamento", 1000)  # a start reading alone
+
+    assert warnings_with_manual_readings(report, [unused]) == report.warnings
+
+
 # -- How errors and warnings reach the user --
 
 
 def run_main(
-    monkeypatch, path: Path, console: bool = True, boxes: list | None = None
+    monkeypatch,
+    path: Path,
+    console: bool = True,
+    boxes: list | None = None,
+    static: Path = STATIC_DATA,
 ) -> list[tuple[str, str]]:
     """Run the CLI on *path*; return the message boxes shown as (title, text)."""
     import siemens_converter.__main__ as cli
 
     boxes = [] if boxes is None else boxes
-    monkeypatch.setattr(sys, "argv", ["siemens-converter", str(path), str(STATIC_DATA)])
+    monkeypatch.setattr(sys, "argv", ["siemens-converter", str(path), str(static)])
     monkeypatch.setattr(cli, "_has_console", lambda: console)
     monkeypatch.setattr(cli, "_msgbox", lambda title, text: boxes.append((title, text)))
     cli.main()
@@ -365,3 +418,20 @@ def test_no_warnings_leaves_the_output_as_it_was(monkeypatch, tmp_path, capsys):
 
     run_main(monkeypatch, path)
     assert "Attenzione" not in capsys.readouterr().out
+
+
+def test_manual_final_reading_replaces_the_report_date_in_the_warnings(
+    monkeypatch, tmp_path, capsys
+):
+    path = edited_report(tmp_path, read_early)
+    wb = openpyxl.load_workbook(STATIC_DATA)
+    wb["Esercizio"]["D5"] = 27500
+    wb["Esercizio"]["E5"] = datetime(2026, 1, 15)
+    static = tmp_path / "dati_2025.xlsx"
+    wb.save(static)
+
+    run_main(monkeypatch, path, static=static)
+
+    out = capsys.readouterr().out
+    assert "Attenzione" not in out
+    assert "Fatto:" in out
