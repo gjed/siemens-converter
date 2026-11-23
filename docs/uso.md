@@ -2,6 +2,8 @@
 
 Il convertitore legge il file delle letture esportato dal sistema Siemens (il file FC_report) e crea un file Excel con la ripartizione delle spese di riscaldamento e acqua tra gli appartamenti.
 
+Si può usare in due modi: con il programma `.exe` per Windows, oppure da una pagina web, senza scaricare nulla. Il risultato è lo stesso.
+
 ## Cosa ti serve
 
 - **Il programma.** È un file `.exe` con un nome simile a `siemens-converter-windows-v0.2.0.exe`. Non va installato.
@@ -42,9 +44,23 @@ Trascina al massimo due file. Il programma ignora quelli in più.
 
 Se premi `Annulla` nella prima finestra, il programma si chiude senza creare nulla. Se premi `Annulla` nella seconda, il programma dice che manca il file dei dati statici e non crea nulla.
 
+## Convertire dal browser
+
+La pagina <https://gjed.github.io/siemens-converter/> fa la stessa conversione del programma, senza scaricarlo. Funziona su qualsiasi computer con un browser aggiornato e una connessione a Internet. La prima volta la pagina impiega qualche istante a caricarsi.
+
+1. Apri la pagina <https://gjed.github.io/siemens-converter/>.
+1. Aspetta che scompaia la scritta `Caricamento del programma di conversione in corso`.
+1. Trascina il file FC_report e il file dei dati statici nel riquadro, oppure clicca sul riquadro e scegli i due file. Non importa l'ordine, e puoi sceglierli anche uno alla volta.
+1. Quando sono stati scelti tutti e due, la conversione parte da sola. Se ne hai scelto uno solo, clicca `Convertire` per leggere che cosa manca.
+1. Clicca `Scaricare Riparto_<numero di serie>_<data>.xlsx`. Il file va nella cartella dei download del browser.
+
+Gli avvisi, se ci sono, compaiono sotto la scritta `Attenzione`. Gli errori compaiono nella pagina con le stesse parole del programma, per esempio `Errore nel report FC:` o `Errore nel file dati statici:`, e non viene creato nessun file: le soluzioni sono in [Problemi e soluzioni](#problemi-e-soluzioni). Per ricominciare con altri file clicca `Ricominciare`.
+
+I file restano sul tuo computer: la pagina li elabora solo nel browser e non li invia a nessun server. Il programma `.exe` e il programma per Linux restano disponibili nella [pagina dell'ultima versione](https://github.com/gjed/siemens-converter/releases/latest), e servono se devi lavorare senza una connessione a Internet.
+
 ## Dove trovi il risultato
 
-Il file creato si trova nella stessa cartella del file FC_report.
+Con il programma, il file creato si trova nella stessa cartella del file FC_report. Con la pagina web, si trova nella cartella dei download del browser.
 
 Il suo nome è `Riparto_<numero di serie>_<data>.xlsx`, per esempio `Riparto_TE99999999_15-01-2026.xlsx`. Il numero di serie e la data (giorno-mese-anno) sono quelli scritti dentro il file FC_report.
 
