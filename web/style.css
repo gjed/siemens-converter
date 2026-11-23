@@ -1,0 +1,173 @@
+:root {
+  color-scheme: light;
+  --ink: #1b1f24;
+  --muted: #4a5560;
+  --accent: #0b5cad;
+  --accent-ink: #ffffff;
+  --line: #b9c2cc;
+  --soft: #eef3f8;
+  --ok: #17632b;
+  --warn: #7a4b00;
+  --warn-bg: #fff4dc;
+  --bad: #9b1c1c;
+  --bad-bg: #fde9e9;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: var(--ink);
+  font: 1.0625rem/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+h1 {
+  font-size: 1.7rem;
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: 1.25rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+.message {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--soft);
+  white-space: pre-wrap;
+}
+
+.message[hidden] {
+  display: none;
+}
+
+.message.error {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.message.ok {
+  background: #e6f4ea;
+  color: var(--ok);
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: center;
+  margin: 1.25rem 0 0.75rem;
+  padding: 2rem 1rem;
+  border: 2px dashed var(--accent);
+  border-radius: 0.75rem;
+  background: var(--soft);
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropzone:hover,
+.dropzone.over,
+.dropzone:focus-within {
+  background: #dce9f6;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.dropzone-title {
+  font-weight: 600;
+  font-size: 1.15rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+}
+
+.chosen {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+button,
+.download {
+  display: inline-block;
+  padding: 0.6rem 1.25rem;
+  border: 2px solid var(--accent);
+  border-radius: 0.5rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #ffffff;
+  color: var(--accent);
+}
+
+button:disabled {
+  border-color: var(--line);
+  background: var(--soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+.download:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.warnings {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.warnings h2 {
+  margin-top: 0;
+}
+
+.warnings ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.details {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.privacy {
+  margin-top: 2rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
