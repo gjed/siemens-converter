@@ -17,6 +17,7 @@ from siemens_converter.models import (
     ExerciseInfo,
     MeterReading,
     Millesimali,
+    ParsedReport,
     PreviousReading,
     StaticData,
 )
@@ -532,3 +533,99 @@ def _read_esercizio(
             final_date = _date(file, ws, f"E{row_no}", raw_date, "la data")
         meters.append(CentralMeterStart(description, initial, final, final_date))
     return ExerciseInfo(year, start_date), meters
+
+
+def _amount(value: float) -> str:
+    """A reading as an Italian number: 24000, 31,613."""
+    return f"{value:.3f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def check_against_report(report: ParsedReport, static_data: StaticData) -> None:
+    """Refuse static data whose start readings are above the final readings.
+
+    Compares the final reading of every central heat meter (the manual one of
+    the static data when given, otherwise the report's) and of every apartment
+    heat, hot water and cold water meter with the matching start reading.
+    Raises StaticDataError naming every meter that went backwards: it means the
+    static data is of another exercise than the report. Equal readings are fine.
+    """
+    # (apartment, kind, line): central meters sort first, then apartment by apartment
+    found: list[tuple[int, int, str]] = []
+
+    def check(
+        apartment: int,
+        kind: int,
+        name: str,
+        unit: str,
+        final: float,
+        initial: float,
+        note: str = "",
+    ) -> None:
+        if final < initial:
+            found.append(
+                (
+                    apartment,
+                    kind,
+                    f"- {name}: lettura finale {_amount(final)} {unit}{note}, "
+                    f"lettura iniziale {_amount(initial)} {unit}",
+                )
+            )
+
+    reported = {m.description: m.heat_energy_kwh for m in report.central_meters}
+    for meter in static_data.central_meters:
+        name = f"contatore centrale «{meter.description}»"
+        if meter.final_kwh is not None:
+            check(
+                0,
+                0,
+                name,
+                "kWh",
+                meter.final_kwh,
+                meter.initial_kwh,
+                " (dai dati statici)",
+            )
+        elif meter.description in reported:
+            check(0, 0, name, "kWh", reported[meter.description], meter.initial_kwh)
+
+    previous = {p.apartment_number: p for p in static_data.previous_readings}
+    for ha in report.heat_allocators:
+        if (prev := previous.get(ha.apartment_number)) is not None:
+            apartment = ha.apartment_number
+            name = f"«{ha.description}»"
+            check(
+                apartment,
+                1,
+                f"contacalorie {name}",
+                "kWh",
+                ha.heat_energy_kwh,
+                prev.heat_kwh,
+            )
+            check(
+                apartment,
+                3,
+                f"contatore dell'acqua fredda {name}",
+                "m³",
+                ha.aux1_volume_m3,
+                prev.cold_water_m3,
+            )
+    for wm in report.water_meters:
+        if (prev := previous.get(wm.apartment_number)) is not None:
+            check(
+                wm.apartment_number,
+                2,
+                f"contatore dell'acqua calda «{wm.description}»",
+                "m³",
+                wm.water_volume_m3,
+                prev.water_m3,
+            )
+    lines = [line for _, _, line in sorted(found)]
+
+    if lines:
+        raise StaticDataError(
+            "Alcune letture finali sono più basse delle letture iniziali dei "
+            "dati statici, e non può essere:\n"
+            + "\n".join(lines)
+            + "\n\nControllare di aver scelto i dati statici dello stesso "
+            "esercizio del report FC (le letture iniziali sono le letture finali "
+            "dell'esercizio precedente) e ripetere la conversione."
+        )
