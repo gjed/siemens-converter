@@ -2,19 +2,26 @@ const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
 
 const $ = (id) => document.getElementById(id);
 const loading = $("loading");
-const dropzone = $("dropzone");
-const input = $("files");
-const chosen = $("chosen");
 const convertButton = $("convert");
 const resetButton = $("reset");
 const outcome = $("outcome");
 
+// One field per role: the field, not the extension, says which file is which.
+const fields = Object.fromEntries(
+  ["report", "static"].map((role) => [
+    role,
+    { zone: $(`${role}-zone`), input: $(role), name: $(`${role}-name`), file: null },
+  ]),
+);
+
 const worker = new Worker("worker.js", { type: "module" });
 
-let files = [];
 let ready = false;
 let busy = false;
 let downloadUrl = null;
+
+const complete = () => Object.values(fields).every((field) => field.file);
+const empty = () => Object.values(fields).every((field) => !field.file);
 
 function show(kind, text) {
   const box = document.createElement("p");
@@ -31,19 +38,16 @@ function clearOutcome() {
 }
 
 function render() {
-  chosen.replaceChildren(
-    ...files.map((file) => {
-      const item = document.createElement("li");
-      item.textContent = file.name;
-      return item;
-    }),
-  );
-  convertButton.disabled = busy || files.length === 0;
-  resetButton.disabled = busy || (files.length === 0 && !outcome.hasChildNodes());
+  for (const field of Object.values(fields)) {
+    field.name.textContent = field.file ? field.file.name : "Nessun file scelto";
+    field.name.classList.toggle("none", !field.file);
+  }
+  convertButton.disabled = busy || !complete();
+  resetButton.disabled = busy || (empty() && !outcome.hasChildNodes());
 }
 
 async function convert() {
-  if (busy || files.length === 0) return;
+  if (busy || !complete()) return;
   busy = true;
   clearOutcome();
   show(
@@ -53,9 +57,10 @@ async function convert() {
       : "Conversione in attesa: partirà appena il programma di conversione è caricato.",
   );
   render();
+  const { report, static: data } = fields;
   let buffers;
   try {
-    buffers = await Promise.all(files.map((file) => file.arrayBuffer()));
+    buffers = await Promise.all([report.file.arrayBuffer(), data.file.arrayBuffer()]);
   } catch {
     showResult({
       ok: false,
@@ -66,7 +71,11 @@ async function convert() {
     return;
   }
   worker.postMessage(
-    { type: "convert", files: files.map((file, i) => ({ name: file.name, buffer: buffers[i] })) },
+    {
+      type: "convert",
+      report: { name: report.file.name, buffer: buffers[0] },
+      static: { name: data.file.name, buffer: buffers[1] },
+    },
     buffers,
   );
 }
@@ -111,15 +120,23 @@ function showResult(result) {
   render();
 }
 
-function addFiles(added) {
-  // A later pick replaces the file of the same kind, so a corrected file is the one converted.
-  const isStatic = (file) => file.name.toLowerCase().endsWith(".xlsx");
-  const incoming = [...added];
-  const kinds = new Set(incoming.map(isStatic));
-  files = [...files.filter((known) => !kinds.has(isStatic(known))), ...incoming];
-  input.value = "";
+function choose(field, added) {
+  field.input.value = "";
+  if (added.length === 0) return;
+  if (added.length > 1) {
+    clearOutcome();
+    show(
+      "error",
+      "Ogni riquadro accetta un solo file: il file FC_report nel primo, il file dei dati " +
+        "statici nel secondo. Trascinare un file per volta.",
+    );
+    render();
+    return;
+  }
+  // A new file replaces the field's one, so a corrected file is the one converted.
+  field.file = added[0];
   render();
-  if (files.length >= 2) convert();
+  if (complete()) convert();
 }
 
 worker.onmessage = (event) => {
@@ -141,26 +158,29 @@ worker.onmessage = (event) => {
   }
 };
 
-input.addEventListener("change", () => addFiles(input.files));
 convertButton.addEventListener("click", convert);
 resetButton.addEventListener("click", () => {
-  files = [];
+  for (const field of Object.values(fields)) field.file = null;
   busy = false;
   clearOutcome();
   render();
 });
 
-dropzone.addEventListener("dragover", (event) => {
-  event.preventDefault();
-  dropzone.classList.add("over");
-});
-dropzone.addEventListener("dragleave", () => dropzone.classList.remove("over"));
-dropzone.addEventListener("drop", (event) => {
-  event.preventDefault();
-  dropzone.classList.remove("over");
-  addFiles(event.dataTransfer.files);
-});
-// A file dropped beside the drop zone must not make the browser open it.
+for (const field of Object.values(fields)) {
+  const { zone, input } = field;
+  input.addEventListener("change", () => choose(field, [...input.files]));
+  zone.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    zone.classList.add("over");
+  });
+  zone.addEventListener("dragleave", () => zone.classList.remove("over"));
+  zone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    zone.classList.remove("over");
+    choose(field, [...event.dataTransfer.files]);
+  });
+}
+// A file dropped beside the fields must not make the browser open it.
 for (const type of ["dragover", "drop"]) {
   window.addEventListener(type, (event) => event.preventDefault());
 }

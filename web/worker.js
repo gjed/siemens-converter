@@ -7,18 +7,17 @@ const UNEXPECTED =
   "La conversione non è riuscita per un errore imprevisto del programma. " +
   "Inviare i dettagli tecnici qui sotto a chi ha fornito il programma.";
 
-// Same two calls as the command line: route the files by extension, then convert.
+// The same conversion as the command line; the page's fields already say which file is which.
 const GLUE = `
 import json
 from pathlib import Path
 
-from siemens_converter.pipeline import ConversionError, convert, route_files
+from siemens_converter.pipeline import ConversionError, convert
 
 
-def run(paths, out_dir):
+def run(fc_path, static_path, out_dir):
     try:
-        fc_path, static_path = route_files([Path(p) for p in paths])
-        result = convert(fc_path, static_path, Path(out_dir))
+        result = convert(Path(fc_path), Path(static_path), Path(out_dir))
     except ConversionError as exc:
         return json.dumps({"ok": False, "message": str(exc)})
     return json.dumps(
@@ -52,11 +51,11 @@ pyodide.then(
   (error) => postMessage({ type: "failed", detail: String(error) }),
 );
 
-async function convert(files) {
+async function convert({ report, static: data }) {
   const py = await pyodide;
   const FS = py.FS;
   const paths = [];
-  files.forEach((file, i) => {
+  [report, data].forEach((file, i) => {
     FS.mkdirTree(`/work/in${i}`);
     const path = `/work/in${i}/${file.name}`;
     FS.writeFile(path, new Uint8Array(file.buffer));
@@ -64,7 +63,7 @@ async function convert(files) {
   });
   let outPath = null;
   try {
-    const outcome = JSON.parse(py.globals.get("run")(py.toPy(paths), "/work/out"));
+    const outcome = JSON.parse(py.globals.get("run")(paths[0], paths[1], "/work/out"));
     if (!outcome.ok) return { type: "result", ok: false, message: outcome.message };
     outPath = `/work/out/${outcome.name}`;
     const bytes = FS.readFile(outPath).slice();
@@ -92,7 +91,7 @@ onmessage = async (event) => {
   if (event.data.type !== "convert") return;
   let result;
   try {
-    result = await convert(event.data.files);
+    result = await convert(event.data);
   } catch (error) {
     result = { type: "result", ok: false, message: `${UNEXPECTED}\n\nDettagli tecnici:\n${error}` };
   }
