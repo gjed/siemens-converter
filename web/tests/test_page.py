@@ -243,3 +243,19 @@ def test_choosing_the_second_file_later_converts(visit):
     visit.page.set_input_files("#files", [str(STATIC_DATA)])
     expect(visit.page.locator("#download")).to_be_visible()
     assert visit.page.locator("#download").get_attribute("download") == OUTPUT_NAME
+
+
+def test_repicking_the_static_file_converts_the_new_one(visit, tmp_path):
+    report = copy(FC_REPORT, tmp_path)
+    broken = copy(STATIC_DATA, tmp_path, "dati_difettosi.xlsx")
+    workbook = openpyxl.load_workbook(broken)
+    workbook["Millesimali"]["C5"] = None
+    workbook.save(broken)
+
+    choose(visit, report, broken)
+    assert refusal_on_page(visit).startswith("Errore nel file dati statici: ")
+    visit.page.set_input_files("#files", [str(STATIC_DATA)])
+
+    expect(visit.page.locator("#download")).to_be_visible()
+    names = [li.inner_text() for li in visit.page.locator("#chosen li").all()]
+    assert names == [report.name, STATIC_DATA.name]

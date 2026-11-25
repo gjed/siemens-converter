@@ -101,11 +101,11 @@ function showResult(result) {
 }
 
 function addFiles(added) {
-  for (const file of added) {
-    if (!files.some((known) => known.name === file.name && known.size === file.size)) {
-      files.push(file);
-    }
-  }
+  // A later pick replaces the file of the same kind, so a corrected file is the one converted.
+  const isStatic = (file) => file.name.toLowerCase().endsWith(".xlsx");
+  const incoming = [...added];
+  const kinds = new Set(incoming.map(isStatic));
+  files = [...files.filter((known) => !kinds.has(isStatic(known))), ...incoming];
   input.value = "";
   render();
   if (files.length >= 2) convert();
