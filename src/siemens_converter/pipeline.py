@@ -47,6 +47,14 @@ def route_files(paths: list[Path]) -> tuple[Path, Path]:
     the other file is the FC_report. Raises ``ConversionError`` when the files
     given are not exactly one of each.
     """
+    if len(paths) > 2:
+        names = [f"«{p.name}»" for p in paths]
+        raise ConversionError(
+            f"Sono stati scelti {len(paths)} file, {', '.join(names[:-1])} e "
+            f"{names[-1]}, ma ne servono due: {_FIND_REPORT} e il file dei dati "
+            "statici (.xlsx). Scegliere solo questi due file e ripetere la "
+            "conversione."
+        )
     static = [p for p in paths if p.suffix.lower() == ".xlsx"]
     reports = [p for p in paths if p.suffix.lower() != ".xlsx"]
     if not reports and len(static) == 1:

@@ -102,7 +102,7 @@ def main() -> None:
     """Run the converter from CLI or drag-and-drop."""
     if len(sys.argv) >= 2:
         # CLI / drag-and-drop mode
-        fc_path, static_path = _route_files([Path(a) for a in sys.argv[1:3]])
+        fc_path, static_path = _route_files([Path(a) for a in sys.argv[1:]])
     elif not _has_console():
         # No-console (PyInstaller --noconsole): use Windows file dialogs
         fc_str = _win_open_file_dialog(
