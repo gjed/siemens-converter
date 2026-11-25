@@ -109,7 +109,9 @@ jobs:
 
       # semantic-release pushes the tag first and creates the GitHub release with
       # its notes afterwards, so this workflow can reach the upload before the
-      # release exists. Wait for it instead of creating a second release.
+      # release exists. Wait for it instead of creating a second release. The
+      # release is a draft until the binaries are attached; gh finds a draft by
+      # its tag.
       - name: Wait for the release created by semantic-release
         run: |
           for attempt in $(seq 1 40); do
@@ -132,6 +134,12 @@ jobs:
             "artifacts/siemens-converter-linux-${TAG}" \
             src/siemens_converter/static_data_template.xlsx
 
+      # Publishing last keeps the latest release from being one without its
+      # downloads. If an earlier job fails, the draft stays unpublished and
+      # re-running this workflow completes it.
+      - name: Publish the release
+        run: gh release edit "$TAG" --draft=false --latest
+
       - name: Clean up old release assets
         run: |
           # Keep assets only on the 3 newest stable releases.
@@ -149,8 +157,8 @@ jobs:
           }
 
           echo "Keeping only 3 newest stable releases with assets..."
-          gh release list --limit 100 --json tagName,isPrerelease \
-            | jq -r '.[] | select(.isPrerelease == false) | .tagName' \
+          gh release list --limit 100 --json tagName,isPrerelease,isDraft \
+            | jq -r '.[] | select(.isPrerelease == false and .isDraft == false) | .tagName' \
             | tail -n +4 | while read -r tag; do
               delete_assets_for_release "$tag"
             done

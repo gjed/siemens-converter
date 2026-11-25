@@ -38,7 +38,9 @@ module.exports = {
       },
     ],
     // Tag and release only: main requires signed commits, so no
-    // @semantic-release/git, no changelog file, no npm publish.
-    "@semantic-release/github",
+    // @semantic-release/git, no changelog file, no npm publish. The release is
+    // a draft until the Release workflow has attached the binaries and
+    // publishes it, so the latest release always has its downloads.
+    ["@semantic-release/github", { draftRelease: true }],
   ],
 };
