@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # setuptools-scm reads the version from the git tags
+          fetch-depth: 0
 
       - uses: actions/setup-python@v7
         with:
@@ -44,6 +47,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # setuptools-scm reads the version from the git tags
+          fetch-depth: 0
 
       - uses: actions/setup-python@v7
         with:
