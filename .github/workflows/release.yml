@@ -87,19 +87,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
 
     steps:
       - uses: actions/checkout@v7
-
-      - name: Check if pre-release
-        id: prerelease
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-.+ ]]; then
-            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Download all artifacts
         uses: actions/download-artifact@v8
@@ -108,32 +102,39 @@ jobs:
 
       - name: Rename artifacts with tag
         run: |
-          TAG="${GITHUB_REF_NAME}"
           mv artifacts/siemens-converter-windows.exe/siemens-converter-windows.exe \
-             artifacts/siemens-converter-windows-${TAG}.exe
+             "artifacts/siemens-converter-windows-${TAG}.exe"
           mv artifacts/siemens-converter-linux/siemens-converter-linux \
-             artifacts/siemens-converter-linux-${TAG}
+             "artifacts/siemens-converter-linux-${TAG}"
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          generate_release_notes: true
-          prerelease: ${{ steps.prerelease.outputs.is_prerelease == 'true' }}
-          files: |
-            artifacts/siemens-converter-windows-${{ github.ref_name }}.exe
-            artifacts/siemens-converter-linux-${{ github.ref_name }}
+      # semantic-release pushes the tag first and creates the GitHub release with
+      # its notes afterwards, so this workflow can reach the upload before the
+      # release exists. Wait for it instead of creating a second release.
+      - name: Wait for the release created by semantic-release
+        run: |
+          for attempt in $(seq 1 40); do
+            if gh release view "$TAG" > /dev/null 2>&1; then
+              echo "Release $TAG found."
+              exit 0
+            fi
+            echo "Release $TAG does not exist yet (attempt $attempt of 40), waiting..."
+            sleep 15
+          done
+          echo "::error::Release $TAG was not created within 10 minutes."
+          exit 1
+
+      # The release notes are written by semantic-release; uploading assets
+      # leaves them untouched. --clobber lets a re-run replace the assets.
+      - name: Attach binaries to the release
+        run: |
+          gh release upload "$TAG" --clobber \
+            "artifacts/siemens-converter-windows-${TAG}.exe" \
+            "artifacts/siemens-converter-linux-${TAG}" \
             src/siemens_converter/static_data_template.xlsx
 
       - name: Clean up old release assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IS_PRERELEASE: ${{ steps.prerelease.outputs.is_prerelease }}
-          CURRENT_TAG: ${{ github.ref_name }}
         run: |
-          # Delete assets from older releases based on release type:
-          #   RC release  → strip assets from all OTHER pre-releases
-          #   Stable      → strip assets from ALL pre-releases
-          #                + keep only the 3 newest stable releases with assets
+          # Keep assets only on the 3 newest stable releases.
 
           delete_assets_for_release() {
             local tag="$1"
@@ -147,29 +148,11 @@ jobs:
             fi
           }
 
-          # Get all releases as JSON
-          releases=$(gh release list --limit 100 --json tagName,isPrerelease)
-
-          if [[ "$IS_PRERELEASE" == "true" ]]; then
-            # RC release: delete assets from all other pre-releases
-            echo "RC release ($CURRENT_TAG): cleaning older pre-release assets..."
-            echo "$releases" | jq -r '.[] | select(.isPrerelease == true) | .tagName' | while read -r tag; do
-              if [[ "$tag" != "$CURRENT_TAG" ]]; then
-                delete_assets_for_release "$tag"
-              fi
-            done
-          else
-            # Stable release: delete ALL pre-release assets
-            echo "Stable release ($CURRENT_TAG): cleaning all pre-release assets..."
-            echo "$releases" | jq -r '.[] | select(.isPrerelease == true) | .tagName' | while read -r tag; do
+          echo "Keeping only 3 newest stable releases with assets..."
+          gh release list --limit 100 --json tagName,isPrerelease \
+            | jq -r '.[] | select(.isPrerelease == false) | .tagName' \
+            | tail -n +4 | while read -r tag; do
               delete_assets_for_release "$tag"
             done
-
-            # Keep only 3 newest stable releases with assets
-            echo "Keeping only 3 newest stable releases with assets..."
-            echo "$releases" | jq -r '.[] | select(.isPrerelease == false) | .tagName' | tail -n +4 | while read -r tag; do
-              delete_assets_for_release "$tag"
-            done
-          fi
 
           echo "Cleanup complete."
