@@ -6,12 +6,12 @@ context: |
   ## Tech Stack
 
   - Python 3.15 only (`requires-python = ">=3.15"`)
-  - setuptools (pyproject.toml, src-layout, `template.xlsx` and `static_data_template.xlsx` as package data)
+  - setuptools and setuptools-scm (pyproject.toml, version from the git tag, src-layout, `template.xlsx` and `static_data_template.xlsx` as package data)
   - openpyxl (reads the static data file, fills the XLSX template)
   - `html.parser` from the standard library (reads the FC_report)
   - pytest + pytest-cov (testing)
   - PyInstaller (Windows `.exe` and Linux binary)
-  - GitHub Actions (a single CI job on Python 3.15, tag-triggered releases)
+  - GitHub Actions (a single CI job on Python 3.15, semantic-release on `main`, tag-triggered binary builds)
 
   ## Project Conventions
 
@@ -43,7 +43,8 @@ context: |
   - Conventional Commits: `feat(scope): description`, `fix(scope):`, `chore(scope):`
   - `main` is protected by a ruleset: linear history, signed commits, no force pushes
   - CI runs on every pull request and on every push to `main`
-  - Tag-triggered releases (`v*`) build the Windows `.exe` and the Linux binary and publish them with `static_data_template.xlsx` as a separate asset
+  - Releases are cut by semantic-release on every push to `main`: `feat` releases a minor version, `fix`, `perf` and `revert` a patch, a breaking change a major one, any other type nothing. It pushes the `v*` tag and creates the GitHub release; it never commits to `main`
+  - The tag triggers the build of the Windows `.exe` and the Linux binary, attached with `static_data_template.xlsx` as a separate asset to the release; the package version comes from the tag (`setuptools-scm`)
 
   ## Domain Context
 
