@@ -90,6 +90,11 @@ async function convert(files) {
 
 onmessage = async (event) => {
   if (event.data.type !== "convert") return;
-  const result = await convert(event.data.files);
+  let result;
+  try {
+    result = await convert(event.data.files);
+  } catch (error) {
+    result = { type: "result", ok: false, message: `${UNEXPECTED}\n\nDettagli tecnici:\n${error}` };
+  }
   postMessage(result, result.buffer ? [result.buffer] : []);
 };

@@ -53,7 +53,18 @@ async function convert() {
       : "Conversione in attesa: partirà appena il programma di conversione è caricato.",
   );
   render();
-  const buffers = await Promise.all(files.map((file) => file.arrayBuffer()));
+  let buffers;
+  try {
+    buffers = await Promise.all(files.map((file) => file.arrayBuffer()));
+  } catch {
+    showResult({
+      ok: false,
+      message:
+        "Impossibile leggere i file scelti, forse modificati dopo averli scelti. " +
+        "Premere «Ricominciare», sceglierli di nuovo e ripetere la conversione.",
+    });
+    return;
+  }
   worker.postMessage(
     { type: "convert", files: files.map((file, i) => ({ name: file.name, buffer: buffers[i] })) },
     buffers,
