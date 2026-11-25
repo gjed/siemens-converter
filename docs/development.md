@@ -37,6 +37,18 @@ On Linux the `--add-data` separator is `:` instead of `;`, and the workflow omit
 
 `static_data_template.xlsx` is not bundled: the workflow attaches it to the release as a separate asset.
 
+## Releasing
+
+A release is cut by merging to `main`; nobody tags by hand.
+
+1. On every push to `main`, the `Semantic release` workflow reads the Conventional Commits since the last `v*` tag and computes the next version: a breaking change gives a major version, `feat` a minor one, and `fix`, `perf` and `revert` a patch. Any other type (`docs`, `chore`, `ci`, `test`, `refactor`, `style`, `build`) releases nothing.
+1. It pushes the tag `v<version>` and creates the GitHub release with its notes. It does not commit to `main`: there is no changelog file and no version bump.
+1. The tag starts the `Release` workflow, which tests, builds the Windows `.exe` and the Linux binary and attaches them, with `static_data_template.xlsx`, to that release. It waits for the release if the build is faster than semantic-release.
+
+The tag is pushed with a token of the `gjed-release` GitHub App, because a tag pushed with the default `GITHUB_TOKEN` does not start other workflows. The workflow runs in the `release` environment, which holds the app credentials and accepts only `main`. Only the 3 newest stable releases keep their assets. There are no pre-releases.
+
+The package version comes from the tag through `setuptools-scm`: `0.3.0` when built at the tag `v0.3.0`, and a development version such as `0.3.1.dev4+g1a2b3c4` after it. A checkout needs its full history and tags (`fetch-depth: 0` in CI) for the version to be right.
+
 ## FC_report Format Reference
 
 An FC_report is a UTF-8 HTML document saved with an `.xls` extension. `parser.py` reads the rows of its table and addresses them by zero-based index.
