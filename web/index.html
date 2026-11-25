@@ -21,9 +21,9 @@
 
       <ol>
         <li>
-          Scegliere o trascinare qui sotto il file FC_report (il file .xls esportato dal sistema
-          Siemens) e il file dei dati statici (il file .xlsx compilato per l'esercizio). I due
-          file si possono scegliere in qualsiasi ordine.
+          Scegliere o trascinare il file FC_report (il file .xls esportato dal sistema Siemens)
+          nel suo riquadro e il file dei dati statici (il file .xlsx compilato per l'esercizio)
+          nel suo. I due file si possono scegliere in qualsiasi ordine.
         </li>
         <li>Attendere la fine della conversione.</li>
         <li>
@@ -52,13 +52,22 @@
         qualche istante.
       </p>
 
-      <label id="dropzone" class="dropzone" for="files">
-        <span class="dropzone-title">Trascinare qui i due file</span>
-        <span>oppure fare clic per sceglierli dal computer</span>
-        <input id="files" class="visually-hidden" type="file" multiple />
-      </label>
-
-      <ul id="chosen" class="chosen" aria-label="File scelti"></ul>
+      <div class="fields">
+        <label id="report-zone" class="dropzone" for="report">
+          <span class="dropzone-title">File FC_report</span>
+          <span>Il file .xls esportato dal sistema Siemens. Trascinarlo qui oppure fare clic per
+            sceglierlo.</span>
+          <span id="report-name" class="file-name"></span>
+          <input id="report" class="visually-hidden" type="file" accept=".xls" />
+        </label>
+        <label id="static-zone" class="dropzone" for="static">
+          <span class="dropzone-title">File dei dati statici</span>
+          <span>Il file .xlsx compilato per l'esercizio. Trascinarlo qui oppure fare clic per
+            sceglierlo.</span>
+          <span id="static-name" class="file-name"></span>
+          <input id="static" class="visually-hidden" type="file" accept=".xlsx" />
+        </label>
+      </div>
 
       <div class="actions">
         <button id="convert" type="button" disabled>Convertire</button>

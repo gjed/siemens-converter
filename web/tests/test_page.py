@@ -126,9 +126,19 @@ def cells(path: Path) -> dict[str, list[list[tuple]]]:
     }
 
 
-def choose(visit: Visit, *files: Path) -> None:
+def choose(
+    visit: Visit,
+    report: Path | None = None,
+    static: Path | None = None,
+    *,
+    static_first: bool = False,
+) -> None:
+    """Put *report* in the FC_report field and *static* in the static data field."""
     visit.page.wait_for_selector("#loading", state="hidden")
-    visit.page.set_input_files("#files", [str(f) for f in files])
+    picks = [("#report", report), ("#static", static)]
+    for field, file in reversed(picks) if static_first else picks:
+        if file is not None:
+            visit.page.set_input_files(field, str(file))
 
 
 def refusal_on_page(visit: Visit) -> str:
@@ -148,8 +158,7 @@ def test_page_writes_the_workbook_the_cli_writes(visit, tmp_path, reverse):
 
     page = visit.page
     assert page.locator("#loading").is_visible()  # the loading state shows first
-    files = [STATIC_DATA, FC_REPORT] if reverse else [FC_REPORT, STATIC_DATA]
-    choose(visit, *files)
+    choose(visit, FC_REPORT, STATIC_DATA, static_first=reverse)
     expect(page.locator("#download")).to_be_visible()
     with page.expect_download() as download:
         page.click("#download")
@@ -194,16 +203,13 @@ def test_page_makes_no_request_outside_its_own_origin(visit, origin):
     assert any(u.endswith(".whl") and "openpyxl" in u for u in visit.requests)
 
 
-def test_only_the_report_is_refused_like_the_cli(visit, tmp_path):
-    report = copy(FC_REPORT, tmp_path)
-    code, output = cli(report)
-    assert code == 1
+def test_only_the_report_converts_nothing(visit):
+    choose(visit, FC_REPORT)
 
-    choose(visit, report)
-    visit.page.click("#convert")
-
-    assert refusal_on_page(visit) == cli_message(output)
-    assert "Manca il file dei dati statici" in cli_message(output)
+    expect(visit.page.locator("#report-name")).to_have_text(FC_REPORT.name)
+    expect(visit.page.locator("#convert")).to_be_disabled()
+    expect(visit.page.locator("#outcome .message")).to_have_count(0)
+    assert visit.page.locator("#download").count() == 0
 
 
 def test_malformed_static_data_is_refused_like_the_cli(visit, tmp_path):
@@ -237,15 +243,30 @@ def test_a_file_that_is_not_a_report_is_refused_like_the_cli(visit, tmp_path):
     assert message.startswith("Errore nel report FC: ")
 
 
+def test_a_riparto_as_static_data_is_refused_like_the_cli(visit, tmp_path):
+    report = copy(FC_REPORT, tmp_path)
+    code, _ = cli(report, copy(STATIC_DATA, tmp_path))
+    assert code == 0
+    riparto = tmp_path / OUTPUT_NAME
+    code, output = cli(report, riparto)
+    assert code == 1
+
+    choose(visit, report, riparto)
+
+    message = refusal_on_page(visit)
+    assert message == cli_message(output)
+    assert "non è un file dei dati statici" in message
+
+
 def test_choosing_the_second_file_later_converts(visit):
     choose(visit, FC_REPORT)
     expect(visit.page.locator("#outcome .message")).to_have_count(0)  # waits for the other file
-    visit.page.set_input_files("#files", [str(STATIC_DATA)])
+    visit.page.set_input_files("#static", str(STATIC_DATA))
     expect(visit.page.locator("#download")).to_be_visible()
     assert visit.page.locator("#download").get_attribute("download") == OUTPUT_NAME
 
 
-def test_repicking_the_static_file_converts_the_new_one(visit, tmp_path):
+def test_a_new_static_data_file_replaces_the_old_one(visit, tmp_path):
     report = copy(FC_REPORT, tmp_path)
     broken = copy(STATIC_DATA, tmp_path, "dati_difettosi.xlsx")
     workbook = openpyxl.load_workbook(broken)
@@ -254,8 +275,24 @@ def test_repicking_the_static_file_converts_the_new_one(visit, tmp_path):
 
     choose(visit, report, broken)
     assert refusal_on_page(visit).startswith("Errore nel file dati statici: ")
-    visit.page.set_input_files("#files", [str(STATIC_DATA)])
+    visit.page.set_input_files("#static", str(STATIC_DATA))
 
     expect(visit.page.locator("#download")).to_be_visible()
-    names = [li.inner_text() for li in visit.page.locator("#chosen li").all()]
-    assert names == [report.name, STATIC_DATA.name]
+    expect(visit.page.locator("#report-name")).to_have_text(report.name)
+    expect(visit.page.locator("#static-name")).to_have_text(STATIC_DATA.name)
+
+
+def test_several_files_dropped_on_a_field_are_refused(visit):
+    choose(visit, FC_REPORT)
+    visit.page.evaluate(
+        """() => {
+            const data = new DataTransfer();
+            for (const name of ["a.xls", "b.xlsx"]) data.items.add(new File(["x"], name));
+            const zone = document.getElementById("report-zone");
+            zone.dispatchEvent(new DragEvent("drop", { dataTransfer: data, bubbles: true }));
+        }"""
+    )
+
+    assert refusal_on_page(visit).startswith("Ogni riquadro accetta un solo file")
+    expect(visit.page.locator("#report-name")).to_have_text(FC_REPORT.name)
+    expect(visit.page.locator("#convert")).to_be_disabled()

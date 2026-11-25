@@ -61,12 +61,17 @@ a {
   color: var(--ok);
 }
 
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 1rem;
+}
 .dropzone {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   align-items: center;
-  margin: 1.25rem 0 0.75rem;
   padding: 2rem 1rem;
   border: 2px dashed var(--accent);
   border-radius: 0.75rem;
@@ -99,9 +104,13 @@ a {
   border: 0;
 }
 
-.chosen {
-  margin: 0 0 0.75rem;
-  padding-left: 1.25rem;
+.file-name {
+  margin-top: 0.5rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.file-name.none {
+  font-weight: normal;
   color: var(--muted);
 }
 
