@@ -37,7 +37,7 @@ CORE_FILES = (
     "python_stdlib.zip",
     "pyodide-lock.json",
 )
-PAGE_FILES = ("index.html", "app.js", "worker.js", "style.css")
+PAGE_FILES = ("index.html", "app.js", "worker.js", "style.css", "favicon.svg")
 
 
 def download(url: str, destination: Path, sha256: str) -> None:
