@@ -27,6 +27,11 @@ def test_route_files_in_either_order():
         (["a.xlsx", "b.xlsx"], "Sono stati scelti due file .xlsx, «a.xlsx» e «b.xlsx»"),
         (["a.xls", "b.xls"], "Sono stati scelti due file che non sono .xlsx, «a.xls»"),
         (["FC_report.xls"], "Manca il file dei dati statici: è stato scelto solo"),
+        (
+            ["FC_report.xls", "vecchio.xlsx", "nuovo.xlsx"],
+            "Sono stati scelti 3 file, «FC_report.xls», «vecchio.xlsx» e «nuovo.xlsx», "
+            "ma ne servono due",
+        ),
     ],
 )
 def test_route_files_refuses_anything_but_one_of_each(names, start):

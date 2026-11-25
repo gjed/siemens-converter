@@ -28,9 +28,7 @@ Si può usare in due modi: con il programma `.exe` per Windows, oppure da una pa
 1. Aspetta la finestra con la scritta `Fatto!` e il nome del file creato.
 1. Premi `OK`.
 
-Non importa quale file selezioni per primo. Il programma li riconosce dall'estensione: il file `.xlsx` è quello dei dati statici, l'altro è il file FC_report. Servono sempre tutti e due. Se ne trascini uno solo, o se i due file sono entrambi `.xlsx` o nessuno dei due lo è, il programma lo dice e non converte nulla.
-
-Trascina al massimo due file. Il programma ignora quelli in più.
+Non importa quale file selezioni per primo. Il programma li riconosce dall'estensione: il file `.xlsx` è quello dei dati statici, l'altro è il file FC_report. Servono sempre tutti e due. Se ne trascini uno solo o più di due, o se i due file sono entrambi `.xlsx` o nessuno dei due lo è, il programma lo dice e non converte nulla.
 
 ## Convertire con il doppio clic
 
@@ -234,6 +232,13 @@ Hai scelto due file che finiscono con `.xlsx`. Il programma ne accetta uno solo,
 Hai scelto due file che non finiscono con `.xlsx`. Il programma accetta un solo file FC_report e vuole che il file dei dati statici sia un file `.xlsx`.
 
 1. Scegli il file FC_report e il file dei dati statici. Il nome del file dei dati statici deve finire con `.xlsx`.
+1. Ripeti la conversione.
+
+### `Sono stati scelti` seguito dal numero dei file, per esempio `Sono stati scelti 3 file`
+
+Hai scelto più di due file. Il programma ne accetta solo due, il file FC_report e il file dei dati statici, e non sceglie al posto tuo quali usare.
+
+1. Scegli solo il file FC_report e il file dei dati statici.
 1. Ripeti la conversione.
 
 ### `Il file FC_report` seguito da un nome e da `non esiste`

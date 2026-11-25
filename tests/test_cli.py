@@ -160,6 +160,20 @@ def test_two_files_that_are_not_xlsx_given(monkeypatch, capsys, tmp_path, consol
     assert list(tmp_path.glob("Riparto_*.xlsx")) == []
 
 
+@both_ways
+def test_more_than_two_files_given(monkeypatch, capsys, tmp_path, console):
+    report = copy(FC_REPORT, tmp_path)
+    old = copy(STATIC_DATA, tmp_path, "dati_vecchi.xlsx")
+    new = copy(STATIC_DATA, tmp_path)
+
+    assert refusal(monkeypatch, capsys, report, old, new, console=console) == (
+        f"Sono stati scelti 3 file, «{report.name}», «{old.name}» e «{new.name}», "
+        f"ma ne servono due: {FIND_REPORT} e il file dei dati statici (.xlsx). "
+        "Scegliere solo questi due file e ripetere la conversione."
+    )
+    assert list(tmp_path.glob("Riparto_*.xlsx")) == []
+
+
 def test_cancelling_the_static_data_dialog_is_refused(monkeypatch, capsys, tmp_path):
     report = copy(FC_REPORT, tmp_path)
     titles: list[str] = []
