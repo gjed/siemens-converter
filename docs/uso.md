@@ -50,8 +50,9 @@ La pagina <https://gjed.github.io/siemens-converter/> fa la stessa conversione d
 
 1. Apri la pagina <https://gjed.github.io/siemens-converter/>.
 1. Aspetta che scompaia la scritta `Caricamento del programma di conversione in corso`.
-1. Trascina il file FC_report e il file dei dati statici nel riquadro, oppure clicca sul riquadro e scegli i due file. Non importa l'ordine, e puoi sceglierli anche uno alla volta.
-1. Quando sono stati scelti tutti e due, la conversione parte da sola. Se ne hai scelto uno solo, clicca `Convertire` per leggere che cosa manca.
+1. Trascina il file FC_report nel riquadro `File FC_report`, oppure clicca sul riquadro e sceglilo.
+1. Trascina il file dei dati statici nel riquadro `File dei dati statici`, oppure clicca sul riquadro e sceglilo. Non importa quale riquadro riempi per primo. Ogni riquadro mostra il nome del file che contiene, e accetta un solo file: se ne scegli un altro, sostituisce quello di prima.
+1. Quando i due riquadri contengono un file, la conversione parte da sola. Finché ne manca uno, il pulsante `Convertire` resta spento.
 1. Clicca `Scaricare Riparto_<numero di serie>_<data>.xlsx`. Il file va nella cartella dei download del browser.
 
 Gli avvisi, se ci sono, compaiono sotto la scritta `Attenzione`. Gli errori compaiono nella pagina con le stesse parole del programma, per esempio `Errore nel report FC:` o `Errore nel file dati statici:`, e non viene creato nessun file: le soluzioni sono in [Problemi e soluzioni](#problemi-e-soluzioni). Per ricominciare con altri file clicca `Ricominciare`.
