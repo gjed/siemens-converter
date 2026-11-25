@@ -49,6 +49,16 @@ The tag SHALL be pushed with credentials that start the tag-triggered release wo
 - **WHEN** the tag `v<version>` is pushed and the build and tests pass
 - **THEN** the release `v<version>` has the assets `siemens-converter-windows-v<version>.exe`, `siemens-converter-linux-v<version>` and `static_data_template.xlsx`, and its notes are unchanged
 
+#### Scenario: The release is published with its binaries
+
+- **WHEN** a release is created for a tag
+- **THEN** it stays a draft, and the latest release unchanged, until its binaries and `static_data_template.xlsx` are attached, and only then becomes the latest release
+
+#### Scenario: The build fails
+
+- **WHEN** the tests or a build of the tag workflow fail
+- **THEN** the release stays a draft and the previous release stays the latest, until the failed workflow run is re-run and passes
+
 #### Scenario: The build starts before the release exists
 
 - **WHEN** the tag workflow reaches the upload before the release for the tag has been created
