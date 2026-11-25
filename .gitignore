@@ -8,6 +8,7 @@ coverage.xml
 .pytest_cache/
 .venv/
 .ruff_cache/
+node_modules/
 
 # Local OpenCode tooling state
 .opencode/package-lock.json
